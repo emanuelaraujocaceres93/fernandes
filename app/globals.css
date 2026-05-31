@@ -1,26 +1,55 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Cores globais com melhor contraste */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+input, textarea, select {
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #c9a03d !important;
+  outline: none !important;
+  ring: 2px solid #c9a03d !important;
+}
+
+label {
+  color: #374151 !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.25rem !important;
+  display: block !important;
+}
+
+button {
+  cursor: pointer;
+}
+
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 1rem;
+}
+
+.text-primary {
+  color: #1a2a4f;
+}
+
+.text-accent {
+  color: #c9a03d;
+}
+
+.bg-primary {
+  background-color: #1a2a4f;
+}
+
+.bg-accent {
+  background-color: #c9a03d;
 }
