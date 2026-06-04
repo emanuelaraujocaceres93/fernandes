@@ -17,7 +17,7 @@ export default function ConfiguracoesPage() {
   }, [])
 
   async function carregarConfig() {
-    const { data } = await supabase.from("configuracoes_empresa").select("*").limit(1).single()
+    const { data } = await supabase.from("configuracoes_empresa").select("*").limit(1).maybeSingle()
     if (data) {
       setNome(data.nome_empresa)
       setTelefone(data.telefone || "")
@@ -33,15 +33,24 @@ export default function ConfiguracoesPage() {
     try {
       const { data: userData } = await supabase.auth.getUser()
       
+      const nomeLimpo = nome.trim().replace(/\s+/g, " ")
+      const telefoneLimpo = telefone.trim()
+
+      if (!nomeLimpo) {
+        setMensagem("❌ Informe o nome da empresa")
+        setCarregando(false)
+        return
+      }
+
       if (configId) {
-        await supabase.from("configuracoes_empresa").update({ 
-          nome_empresa: nome, 
-          telefone 
+        await supabase.from("configuracoes_empresa").update({
+          nome_empresa: nomeLimpo,
+          telefone: telefoneLimpo,
         }).eq("id", configId)
       } else {
-        const { data } = await supabase.from("configuracoes_empresa").insert({ 
-          nome_empresa: nome, 
-          telefone,
+        const { data } = await supabase.from("configuracoes_empresa").insert({
+          nome_empresa: nomeLimpo,
+          telefone: telefoneLimpo,
           user_id: userData.user?.id 
         }).select()
         if (data) setConfigId(data[0].id)
@@ -60,7 +69,8 @@ export default function ConfiguracoesPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.includes("image")) {
+    const tiposPermitidos = ["image/png", "image/jpeg", "image/webp"]
+    if (!tiposPermitidos.includes(file.type)) {
       alert("Por favor, selecione uma imagem (PNG, JPG, JPEG)")
       return
     }
@@ -82,9 +92,8 @@ export default function ConfiguracoesPage() {
         return
       }
 
-      const fileExt = file.name.split(".").pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      const filePath = fileName
+      const fileExt = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg"
+      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from("logos")
@@ -109,8 +118,8 @@ export default function ConfiguracoesPage() {
         await supabase.from("configuracoes_empresa").update({ logo_url: publicUrl }).eq("id", configId)
       } else {
         const { data: newConfig } = await supabase.from("configuracoes_empresa").insert({ 
-          nome_empresa: nome, 
-          telefone,
+          nome_empresa: nome.trim().replace(/\s+/g, " "),
+          telefone: telefone.trim(),
           logo_url: publicUrl,
           user_id: userData.user.id 
         }).select()

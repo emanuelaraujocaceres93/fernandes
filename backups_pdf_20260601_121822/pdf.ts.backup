@@ -1,0 +1,163 @@
+import jsPDF from "jspdf"
+import type { EmpresaConfig, ItemCarrinho } from "./types"
+
+type PdfLineItem = {
+  descricao: string
+  quantidade: number
+  unitario: number
+  total: number
+}
+
+type QuotePdfInput = {
+  numero?: string | null
+  titulo: string
+  cliente: string
+  config?: EmpresaConfig | null
+  linhas: PdfLineItem[]
+  total: number
+  detalhes?: Array<[string, string]>
+}
+
+const primary = "#17264a"
+const accent = "#c69b32"
+const muted = "#64748b"
+
+function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null) {
+  doc.setFillColor(primary)
+  doc.rect(0, 0, 210, 35, "F")
+  doc.setTextColor("#ffffff")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(18)
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", 14, 17)
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  doc.text(config?.telefone || "Sistema de gestao comercial", 14, 25)
+
+  doc.setTextColor(accent)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(13)
+  doc.text(title.toUpperCase(), 196, 18, { align: "right" })
+}
+
+function addFooter(doc: jsPDF) {
+  doc.setFillColor(primary)
+  doc.rect(0, 282, 210, 15, "F")
+  doc.setTextColor("#ffffff")
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.text("Este orcamento e valido por 30 dias.", 105, 291, { align: "center" })
+}
+
+function money(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value)
+}
+
+export function saveQuotePdf(input: QuotePdfInput, filename: string) {
+  const doc = new jsPDF("p", "mm", "a4")
+  const issuedAt = new Intl.DateTimeFormat("pt-BR").format(new Date())
+
+  addHeader(doc, input.titulo, input.config)
+
+  doc.setTextColor(primary)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(20)
+  doc.text(input.titulo, 14, 52)
+
+  doc.setFontSize(10)
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(muted)
+  doc.text(`Emissao: ${issuedAt}`, 14, 60)
+  if (input.numero) doc.text(`Numero: ${input.numero}`, 196, 60, { align: "right" })
+
+  doc.setDrawColor("#e5e7eb")
+  doc.setFillColor("#f8fafc")
+  doc.roundedRect(14, 70, 182, 24, 2, 2, "FD")
+  doc.setTextColor(primary)
+  doc.setFont("helvetica", "bold")
+  doc.text("Cliente", 20, 79)
+  doc.setFont("helvetica", "normal")
+  doc.text(input.cliente, 20, 87)
+
+  let detailX = 85
+  for (const [label, value] of input.detalhes || []) {
+    doc.setFont("helvetica", "bold")
+    doc.text(label, detailX, 79)
+    doc.setFont("helvetica", "normal")
+    doc.text(value || "-", detailX, 87, { maxWidth: 50 })
+    detailX += 55
+  }
+
+  let y = 115
+  doc.setFillColor(primary)
+  doc.rect(14, y - 10, 182, 12, "F")
+  doc.setTextColor("#ffffff")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(9)
+  doc.text("Descricao", 18, y - 3)
+  doc.text("Qtd", 140, y - 3, { align: "right" })
+  doc.text("Unitario", 165, y - 3, { align: "right" })
+  doc.text("Total", 192, y - 3, { align: "right" })
+
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor("#111827")
+  doc.setFontSize(9)
+  
+  for (const line of input.linhas) {
+    if (y > 260) {
+      addFooter(doc)
+      doc.addPage()
+      addHeader(doc, input.titulo, input.config)
+      y = 60
+    }
+
+    const description = doc.splitTextToSize(line.descricao, 100)
+    const rowHeight = Math.max(12, description.length * 5 + 10)
+    
+    // Calcular a posição centralizada UMA VEZ
+    const posicaoCentral = y + (rowHeight / 2)
+    
+    // Linha de borda
+    doc.setDrawColor("#e5e7eb")
+    doc.line(14, y + rowHeight - 2, 196, y + rowHeight - 2)
+    
+    // Descrição (alinhada à esquerda, centralizada verticalmente)
+    doc.text(description, 18, posicaoCentral)
+    
+    // Quantidade (alinhada à direita)
+    doc.text(String(line.quantidade), 140, posicaoCentral, { align: "right" })
+    
+    // Unitário
+    doc.text(money(line.unitario), 165, posicaoCentral, { align: "right" })
+    
+    // Total
+    doc.text(money(line.total), 192, posicaoCentral, { align: "right" })
+    
+    y += rowHeight + 2
+  }
+
+  y += 8
+  doc.setFillColor("#fff7e0")
+  doc.roundedRect(118, y, 78, 18, 2, 2, "F")
+  doc.setTextColor(primary)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(10)
+  doc.text("Total geral", 124, y + 12)
+  doc.setTextColor(accent)
+  doc.setFontSize(16)
+  doc.text(money(input.total), 192, y + 12, { align: "right" })
+
+  addFooter(doc)
+  doc.save(filename)
+}
+
+export function cartToPdfLines(items: ItemCarrinho[]) {
+  return items.map((item) => ({
+    descricao: `${item.nome}${item.tipo === "servico" ? " (Servico)" : ""}`,
+    quantidade: item.quantidade,
+    unitario: Number(item.valor_venda) || 0,
+    total: (Number(item.valor_venda) || 0) * item.quantidade,
+  }))
+}

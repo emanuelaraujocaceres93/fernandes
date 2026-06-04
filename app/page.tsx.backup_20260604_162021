@@ -7,15 +7,6 @@ import { formatCurrency, normalizeText } from "../lib/format"
 import type { Cliente, EmpresaConfig, ItemCarrinho, Produto } from "../lib/types"
 import MateriaisOpcoes from "./components/MateriaisOpcoes"
 
-interface ServicoExtra {
-  id: number
-  nome: string
-  descricao: string | null
-  valor: number
-  ativo: boolean
-  ordem: number
-}
-
 export default function PDV() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
@@ -27,14 +18,15 @@ export default function PDV() {
   const [sucesso, setSucesso] = useState("")
   const [config, setConfig] = useState<EmpresaConfig | null>(null)
   const [observacoes, setObservacoes] = useState("")
-  const [servicosExtras, setServicosExtras] = useState<ServicoExtra[]>([])
-  const [servicosSelecionados, setServicosSelecionados] = useState<{ [key: number]: boolean }>({})
+  const [opcionais, setOpcionais] = useState({
+    garantia: false,
+    compressor: false
+  })
   const [materiaisSelecionados, setMateriaisSelecionados] = useState<any>({})
   const [mostrarMateriais, setMostrarMateriais] = useState(false)
 
   useEffect(() => {
     carregarDados()
-    carregarServicosExtras()
   }, [])
 
   async function carregarDados() {
@@ -52,27 +44,13 @@ export default function PDV() {
     }
   }
 
-  async function carregarServicosExtras() {
-    const { data } = await supabase
-      .from("servicos_extras")
-      .select("*")
-      .eq("ativo", true)
-      .order("ordem", { ascending: true })
-    
-    if (data) {
-      setServicosExtras(data)
-      const inicial: { [key: number]: boolean } = {}
-      data.forEach(s => { inicial[s.id] = false })
-      setServicosSelecionados(inicial)
-    }
-  }
-
   const produtosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     if (!termo) return produtos
     return produtos.filter((produto) => produto.nome.toLowerCase().includes(termo))
   }, [busca, produtos])
 
+  // Calcular total do carrinho + materiais selecionados
   const totalMateriais = useMemo(() => {
     let total = 0
     Object.entries(materiaisSelecionados).forEach(([catId, itens]: [string, any]) => {
@@ -98,18 +76,8 @@ export default function PDV() {
   )
 
   const totalGeral = totalCarrinho + totalMateriais
-  
-  const totalServicosExtras = useMemo(() => {
-    let total = 0
-    servicosExtras.forEach(servico => {
-      if (servicosSelecionados[servico.id]) {
-        total += servico.valor
-      }
-    })
-    return total
-  }, [servicosExtras, servicosSelecionados])
-
-  const totalGeralCompleto = totalGeral + totalServicosExtras
+  const totalOpcionaisTela = (opcionais.garantia ? 150 : 0) + (opcionais.compressor ? 224 : 0)
+  const totalGeralCompleto = totalGeral + totalOpcionaisTela
 
   function adicionarAoCarrinho(produto: Produto) {
     setCarrinho((atual) => {
@@ -164,6 +132,7 @@ export default function PDV() {
     return cliente
   }
 
+  // Gerar lista de materiais selecionados para o PDF
   function getMateriaisSelecionadosTexto() {
     const itens: string[] = []
     const categorias: any = {
@@ -188,7 +157,7 @@ export default function PDV() {
     setErro("")
     setSucesso("")
 
-    if (carrinho.length === 0 && totalMateriais === 0 && totalServicosExtras === 0) {
+    if (carrinho.length === 0 && totalMateriais === 0 && !opcionais.garantia && !opcionais.compressor) {
       setErro("Adicione pelo menos um item ao carrinho, selecione materiais ou serviços extras.")
       return
     }
@@ -199,6 +168,10 @@ export default function PDV() {
     setLoading(true)
 
     try {
+      // Calcular opcionais
+      const totalOpcionaisPDF = (opcionais.garantia ? 150 : 0) + (opcionais.compressor ? 224 : 0)
+      const totalComOpcionais = totalGeral + totalOpcionaisPDF
+
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error("Sessão expirada.")
 
@@ -206,7 +179,7 @@ export default function PDV() {
         .from("pedidos")
         .insert({
           cliente_id: cliente.id,
-          total: totalGeralCompleto,
+          total: totalComOpcionais,
           status: "pendente",
           user_id: userData.user.id,
         })
@@ -228,6 +201,7 @@ export default function PDV() {
         if (itensError) throw new Error(itensError.message)
       }
 
+      // Preparar linhas do PDF
       const linhasPDF = [
         ...carrinho.map(item => ({
           descricao: `${item.nome}${item.tipo === "servico" ? " (Serviço)" : ""}`,
@@ -251,13 +225,10 @@ export default function PDV() {
       if (totalMateriais > 0) {
         detalhesAdicionais.push(["Materiais adicionais", formatCurrency(totalMateriais)])
       }
-      if (totalServicosExtras > 0) {
-        detalhesAdicionais.push(["Serviços Extras", formatCurrency(totalServicosExtras)])
-        servicosExtras.forEach(servico => {
-          if (servicosSelecionados[servico.id]) {
-            detalhesAdicionais.push([`  • ${servico.nome}`, formatCurrency(servico.valor)])
-          }
-        })
+      if (totalOpcionaisPDF > 0) {
+        detalhesAdicionais.push(["Serviços Extras", formatCurrency(totalOpcionaisPDF)])
+        if (opcionais.garantia) detalhesAdicionais.push(["  • Garantia estendida", "R$ 150,00"])
+        if (opcionais.compressor) detalhesAdicionais.push(["  • Compressor novo compatível", "R$ 224,00"])
       }
 
       saveQuotePdf(
@@ -267,21 +238,18 @@ export default function PDV() {
           cliente: cliente.nome,
           config,
           linhas: linhasPDF,
-          total: totalGeralCompleto,
+          total: totalComOpcionais,
           detalhes: detalhesAdicionais,
         },
         `orcamento_${pedido.numero_unico || pedido.id}.pdf`,
       )
 
-      // Resetar formulário
       setCarrinho([])
       setNomeCliente("")
       setObservacoes("")
       setMateriaisSelecionados({})
       setMostrarMateriais(false)
-      const resetSelecionados: { [key: number]: boolean } = {}
-      servicosExtras.forEach(s => { resetSelecionados[s.id] = false })
-      setServicosSelecionados(resetSelecionados)
+      setOpcionais({ garantia: false, compressor: false })
       setSucesso("Orçamento salvo e PDF gerado com sucesso!")
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Erro ao gerar orçamento.")
@@ -322,6 +290,7 @@ export default function PDV() {
             />
           </div>
 
+          {/* Botão para mostrar/ocultar materiais */}
           <div className="mb-4">
             <button
               onClick={() => setMostrarMateriais(!mostrarMateriais)}
@@ -377,6 +346,7 @@ export default function PDV() {
             maxLength={120}
           />
 
+          {/* Campo de observações */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               📝 Observações do orçamento
@@ -390,35 +360,35 @@ export default function PDV() {
             />
           </div>
 
-          {servicosExtras.length > 0 && (
-            <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ✅ Serviços Extras (selecione os que desejar):
+          {/* CHECKBOXES DE SERVIÇOS EXTRAS */}
+          <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ✅ Serviços Extras (selecione os que desejar):
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={opcionais.garantia}
+                  onChange={(e) => setOpcionais({...opcionais, garantia: e.target.checked})}
+                  className="mr-2 w-4 h-4 text-blue-600 rounded"
+                />
+                <span className="text-sm">Garantia estendida - <span className="font-bold text-green-600">R$ 150,00</span></span>
               </label>
-              <div className="space-y-2">
-                {servicosExtras.map((servico) => (
-                  <label key={servico.id} className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={servicosSelecionados[servico.id] || false}
-                      onChange={(e) => setServicosSelecionados({
-                        ...servicosSelecionados,
-                        [servico.id]: e.target.checked
-                      })}
-                      className="mr-2 w-4 h-4 text-blue-600 rounded"
-                    />
-                    <span className="text-sm">
-                      {servico.nome} - <span className="font-bold text-green-600">{formatCurrency(servico.valor)}</span>
-                      {servico.descricao && <span className="text-gray-500 text-xs ml-2">({servico.descricao})</span>}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Gerencie estes serviços em: Configurações &gt; Serviços Extras
-              </p>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={opcionais.compressor}
+                  onChange={(e) => setOpcionais({...opcionais, compressor: e.target.checked})}
+                  className="mr-2 w-4 h-4 text-blue-600 rounded"
+                />
+                <span className="text-sm">Compressor novo compatível - <span className="font-bold text-green-600">R$ 224,00</span></span>
+              </label>
             </div>
-          )}
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Dica: Acesse Configurações &gt; Produtos para adicionar mais serviços extras
+            </p>
+          </div>
 
           <div className="mb-4 max-h-[35vh] space-y-3 overflow-y-auto pr-1">
             {carrinho.map((item) => (
@@ -431,27 +401,33 @@ export default function PDV() {
                   <button
                     onClick={() => removerDoCarrinho(item.id)}
                     className="rounded-md px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+                    aria-label={`Remover ${item.nome}`}
                   >
                     Remover
                   </button>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
                   <div className="flex items-center rounded-lg border border-slate-200">
-                    <button className="px-3 py-1" onClick={() => atualizarQuantidade(item.id, item.quantidade - 1)}>-</button>
+                    <button className="px-3 py-1" onClick={() => atualizarQuantidade(item.id, item.quantidade - 1)}>
+                      -
+                    </button>
                     <span className="min-w-8 text-center text-sm font-semibold">{item.quantidade}</span>
-                    <button className="px-3 py-1" onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)}>+</button>
+                    <button className="px-3 py-1" onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)}>
+                      +
+                    </button>
                   </div>
                   <span className="font-semibold">{formatCurrency(item.valor_venda * item.quantidade)}</span>
                 </div>
               </div>
             ))}
-            {carrinho.length === 0 && totalMateriais === 0 && totalServicosExtras === 0 && (
+            {carrinho.length === 0 && totalMateriais === 0 && !opcionais.garantia && !opcionais.compressor && (
               <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
                 Selecione itens, materiais ou serviços extras para montar o orçamento.
               </div>
             )}
           </div>
 
+          {/* Resumo com materiais adicionais e serviços extras */}
           <div className="border-t border-slate-200 pt-4">
             {totalMateriais > 0 && (
               <div className="mb-2 flex items-center justify-between text-sm">
@@ -465,10 +441,10 @@ export default function PDV() {
                 <span>{formatCurrency(totalMateriais)}</span>
               </div>
             )}
-            {totalServicosExtras > 0 && (
+            {totalOpcionaisTela > 0 && (
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="text-slate-600">Serviços Extras:</span>
-                <span>{formatCurrency(totalServicosExtras)}</span>
+                <span>{formatCurrency(totalOpcionaisTela)}</span>
               </div>
             )}
             <div className="mb-4 flex items-center justify-between">
@@ -477,7 +453,7 @@ export default function PDV() {
             </div>
             <button
               onClick={gerarPDF}
-              disabled={loading || (carrinho.length === 0 && totalMateriais === 0 && totalServicosExtras === 0) || !nomeCliente.trim()}
+              disabled={loading || (carrinho.length === 0 && totalMateriais === 0 && !opcionais.garantia && !opcionais.compressor) || !nomeCliente.trim()}
               className="w-full rounded-lg bg-[#17264a] py-3 font-semibold text-white transition hover:bg-[#24375f] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Gerando..." : "📄 Gerar orçamento PDF"}

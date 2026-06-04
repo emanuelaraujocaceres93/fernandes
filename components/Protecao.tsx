@@ -1,8 +1,8 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "../lib/supabaseClient"
-import { useRouter, usePathname } from "next/navigation"
 
 export default function Protecao({ children }: { children: React.ReactNode }) {
   const [carregando, setCarregando] = useState(true)
@@ -10,28 +10,33 @@ export default function Protecao({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
+    let ativo = true
+
     async function verificarLogin() {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      // Páginas que NÃO precisam de login
-      const paginasPublicas = ["/login"]
-      
-      if (!session && !paginasPublicas.includes(pathname)) {
-        router.push("/login")
-      } else {
-        setCarregando(false)
+      const { data, error } = await supabase.auth.getSession()
+
+      if (!ativo) return
+
+      if (error || (!data.session && pathname !== "/login")) {
+        router.replace("/login")
+        return
       }
+
+      setCarregando(false)
     }
-    
+
     verificarLogin()
+    return () => {
+      ativo = false
+    }
   }, [router, pathname])
 
   if (carregando) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c9a03d] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando acesso...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#c9a03d]" />
+          <p className="mt-4 text-sm text-slate-600">Verificando acesso...</p>
         </div>
       </div>
     )

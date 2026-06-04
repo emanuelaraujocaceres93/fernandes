@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabaseClient"
@@ -24,7 +24,7 @@ const emptyForm: FormState = {
 export default function EstoquePage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [modalAberto, setModalAberto] = useState(false)
-  const [tipoItem, setTipoItem] = useState<"produto" | "Serviço">("produto")
+  const [tipoItem, setTipoItem] = useState<"produto" | "servico">("produto")
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [erro, setErro] = useState("")
@@ -47,7 +47,7 @@ export default function EstoquePage() {
     const nome = normalizeText(form.nome)
     const valorVenda = toPositiveNumber(form.valor_venda)
     if (!nome || !valorVenda) {
-      setErro("Informe nome e Preço de venda maior que zero.")
+      setErro("Informe nome e preco de venda maior que zero.")
       return
     }
 
@@ -99,7 +99,7 @@ export default function EstoquePage() {
 
   function abrirEdicao(produto: Produto) {
     setProdutoEditando(produto)
-    setTipoItem(produto.tipo === "Serviço" ? "Serviço" : "produto")
+    setTipoItem(produto.tipo === "servico" ? "servico" : "produto")
     setForm({
       nome: produto.nome,
       quantidade: produto.quantidade?.toString() || "",
@@ -117,11 +117,11 @@ export default function EstoquePage() {
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-[#c9a03d]">CADASTRO</p>
-          <h1 className="text-xl font-bold text-[#17264a]">Estoque e Serviços</h1>
+          <p className="text-sm font-medium uppercase tracking-wide text-[#c9a03d]">Cadastro</p>
+          <h1 className="text-2xl font-bold text-[#17264a]">Estoque e servicos</h1>
         </div>
         <button onClick={abrirNovo} className="rounded-lg bg-[#c9a03d] px-4 py-2 font-semibold text-white hover:bg-[#b58d2c]">
           Novo item
@@ -134,41 +134,33 @@ export default function EstoquePage() {
         </div>
       )}
 
-      {/* Tabela responsiva - SEM barra de rolagem horizontal */}
-      <div className="rounded-lg bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[#17264a] text-white">
-              <tr>
-                <th className="px-3 py-2 text-left">Tipo</th>
-                <th className="px-3 py-2 text-left">Nome</th>
-                <th className="px-3 py-2 text-right">Preço</th>
-                <th className="px-3 py-2 text-left">Ações</th>
+      <div className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+        <table className="w-full min-w-[680px]">
+          <thead className="bg-[#17264a] text-white">
+            <tr>
+              <th className="p-3 text-left text-sm">Tipo</th>
+              <th className="p-3 text-left text-sm">Nome</th>
+              <th className="p-3 text-right text-sm">Preco</th>
+              <th className="p-3 text-left text-sm">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {produtos.map((produto) => (
+              <tr key={produto.id} className="border-b border-slate-100">
+                <td className="p-3 text-sm">{produto.tipo === "servico" ? "Servico" : "Produto"}</td>
+                <td className="p-3 text-sm font-medium">{produto.nome}</td>
+                <td className="p-3 text-right text-sm font-semibold text-green-700">{formatCurrency(produto.valor_venda)}</td>
+                <td className="p-3 text-sm">
+                  <button onClick={() => abrirEdicao(produto)} className="mr-3 font-semibold text-[#17264a]">Editar</button>
+                  <button onClick={() => excluirProduto(produto.id)} className="font-semibold text-red-600">Excluir</button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {produtos.map((produto) => (
-                <tr key={produto.id} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-xs">{produto.tipo === "Serviço" ? "Serviço" : "Produto"}</td>
-                  <td className="px-3 py-2 text-sm font-medium break-words max-w-[120px]">{produto.nome}</td>
-                  <td className="px-3 py-2 text-right text-sm font-semibold text-green-700 whitespace-nowrap">{formatCurrency(produto.valor_venda)}</td>
-                  <td className="px-3 py-2">
-                    <button onClick={() => abrirEdicao(produto)} className="mr-2 text-sm font-semibold text-[#17264a]">Editar</button>
-                    <button onClick={() => excluirProduto(produto.id)} className="text-sm font-semibold text-red-600">Excluir</button>
-                  </td>
-                </tr>
-              ))}
-              {produtos.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-sm text-slate-500">Nenhum item cadastrado.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            ))}
+            {produtos.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-sm text-slate-500">Nenhum item cadastrado.</td></tr>}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal existente - mantido igual */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
@@ -176,7 +168,7 @@ export default function EstoquePage() {
             {!produtoEditando && (
               <div className="mb-4 grid grid-cols-2 gap-2">
                 <button onClick={() => setTipoItem("produto")} className={`rounded-lg border py-2 font-semibold ${tipoItem === "produto" ? "border-[#17264a] bg-[#17264a] text-white" : "border-slate-300"}`}>Produto</button>
-                <button onClick={() => setTipoItem("Serviço")} className={`rounded-lg border py-2 font-semibold ${tipoItem === "Serviço" ? "border-[#17264a] bg-[#17264a] text-white" : "border-slate-300"}`}>Serviço</button>
+                <button onClick={() => setTipoItem("servico")} className={`rounded-lg border py-2 font-semibold ${tipoItem === "servico" ? "border-[#17264a] bg-[#17264a] text-white" : "border-slate-300"}`}>Servico</button>
               </div>
             )}
             <input type="text" placeholder="Nome" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
@@ -186,10 +178,10 @@ export default function EstoquePage() {
                   <input type="number" min="0" placeholder="Quantidade" className="rounded-lg border border-slate-300 p-3" value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
                   <input type="number" min="0" placeholder="Qtd minima" className="rounded-lg border border-slate-300 p-3" value={form.quantidade_minima} onChange={(e) => setForm({ ...form, quantidade_minima: e.target.value })} />
                 </div>
-                <input type="number" min="0" step="0.01" placeholder="Preço compra" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.valor_compra} onChange={(e) => setForm({ ...form, valor_compra: e.target.value })} />
+                <input type="number" min="0" step="0.01" placeholder="Preco compra" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.valor_compra} onChange={(e) => setForm({ ...form, valor_compra: e.target.value })} />
               </>
             )}
-            <input type="number" min="0" step="0.01" placeholder="Preço venda" className="mb-4 w-full rounded-lg border border-slate-300 p-3" value={form.valor_venda} onChange={(e) => setForm({ ...form, valor_venda: e.target.value })} />
+            <input type="number" min="0" step="0.01" placeholder="Preco venda" className="mb-4 w-full rounded-lg border border-slate-300 p-3" value={form.valor_venda} onChange={(e) => setForm({ ...form, valor_venda: e.target.value })} />
             <div className="flex gap-3">
               <button onClick={salvarProduto} className="flex-1 rounded-lg bg-[#17264a] py-2 font-semibold text-white">Salvar</button>
               <button onClick={fecharModal} className="flex-1 rounded-lg bg-slate-200 py-2 font-semibold text-slate-700">Cancelar</button>

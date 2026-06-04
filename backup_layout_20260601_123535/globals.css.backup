@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+}
+/* Estilos responsivos para tabela de estoque */
+@media (max-width: 768px) {
+  /* Container da tabela */
+  .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Tabela responsiva */
+  .responsive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  
+  /* Células com padding reduzido */
+  .responsive-table th,
+  .responsive-table td {
+    padding: 10px 8px !important;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+  
+  /* Ajustar altura das linhas */
+  .responsive-table tr {
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  /* Botões de ação mais compactos */
+  .responsive-table td:last-child button {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    margin-right: 8px !important;
+  }
+  
+  /* Nome do produto quebrar linha se necessário */
+  .responsive-table td:nth-child(2) {
+    max-width: 120px;
+    word-wrap: break-word;
+  }
+  
+  /* Preço com fonte menor */
+  .responsive-table td:nth-child(3) {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+/* Para telas muito pequenas (celular menor) */
+@media (max-width: 480px) {
+  .responsive-table th,
+  .responsive-table td {
+    padding: 8px 4px !important;
+    font-size: 12px;
+  }
+  
+  .responsive-table td:last-child button {
+    padding: 2px 6px !important;
+    font-size: 11px !important;
+    margin-right: 4px !important;
+  }
+  
+  .responsive-table td:nth-child(2) {
+    max-width: 100px;
+  }
+}
+
+/* Rolagem suave no celular */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Estilizar scrollbar (opcional) */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #c9a03d;
+  border-radius: 10px;
+}
+
+/* Responsividade para tabela de estoque */
+@media (max-width: 768px) {
+  /* Container principal */
+  .space-y-6 {
+    gap: 1rem !important;
+  }
+  
+  /* Cabeçalho */
+  .flex-col.sm\:flex-row {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* Botão Novo item */
+  button.rounded-lg.bg-\[#c9a03d\] {
+    width: 100% !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Tabela */
+  .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+  
+  /* Células da tabela */
+  .estoque-table th,
+  .estoque-table td {
+    white-space: nowrap !important;
+  }
+  
+  /* Tipo e ações ficam mais compactos */
+  .estoque-table td:first-child,
+  .estoque-table th:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+  }
+  
+  /* Modal responsivo */
+  .fixed.inset-0 .w-full.max-w-md {
+    width: 90% !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Inputs do modal no celular */
+  .fixed.inset-0 input {
+    font-size: 16px !important; /* Evita zoom automático no iOS */
+  }
+}
+
+@media (max-width: 640px) {
+  /* Título menor */
+  h1.text-2xl {
+    font-size: 1.25rem !important;
+  }
+  
+  /* Botões do modal */
+  .fixed.inset-0 .flex.gap-3 {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .fixed.inset-0 .flex.gap-3 button {
+    width: 100% !important;
+  }
+  
+  /* Grid do modal para produto */
+  .grid.grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Rolagem suave */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Barra de rolagem personalizada (opcional) */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #c9a03d;
+  border-radius: 10px;
+}

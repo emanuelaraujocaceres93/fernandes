@@ -177,7 +177,7 @@ export default function PDV() {
     Object.entries(materiaisSelecionados).forEach(([catId, itensObj]: [string, any]) => {
       Object.entries(itensObj).forEach(([itemId, selecionado]) => {
         if (selecionado && categorias[catId]?.itens[itemId]) {
-          itens.push(`- ${categorias[catId].itens[itemId]}`)
+          itens.push(- )
         }
       })
     })
@@ -230,7 +230,7 @@ export default function PDV() {
 
       const linhasPDF = [
         ...carrinho.map(item => ({
-          descricao: `${item.nome}${item.tipo === "servico" ? " (Serviço)" : ""}`,
+          descricao: ${item.nome},
           quantidade: item.quantidade,
           unitario: Number(item.valor_venda) || 0,
           total: (Number(item.valor_venda) || 0) * item.quantidade
@@ -255,7 +255,7 @@ export default function PDV() {
         detalhesAdicionais.push(["Serviços Extras", formatCurrency(totalServicosExtras)])
         servicosExtras.forEach(servico => {
           if (servicosSelecionados[servico.id]) {
-            detalhesAdicionais.push([`  • ${servico.nome}`, formatCurrency(servico.valor)])
+            detalhesAdicionais.push([  • , formatCurrency(servico.valor)])
           }
         })
       }
@@ -270,10 +270,9 @@ export default function PDV() {
           total: totalGeralCompleto,
           detalhes: detalhesAdicionais,
         },
-        `orcamento_${pedido.numero_unico || pedido.id}.pdf`,
+        orcamento_.pdf,
       )
 
-      // Resetar formulário
       setCarrinho([])
       setNomeCliente("")
       setObservacoes("")
@@ -304,7 +303,7 @@ export default function PDV() {
       </div>
 
       {(erro || sucesso) && (
-        <div className={`rounded-lg p-3 text-sm ${erro ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+        <div className={ounded-lg p-3 text-sm }>
           {erro || sucesso}
         </div>
       )}

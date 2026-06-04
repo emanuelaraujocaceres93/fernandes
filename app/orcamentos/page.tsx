@@ -1,9 +1,12 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabaseClient"
+import { formatCurrency } from "../../lib/format"
+import { useRouter } from "next/navigation"
 
 export default function OrcamentosPage() {
+  const router = useRouter()
   const [pedidos, setPedidos] = useState<any[]>([])
   const [fretes, setFretes] = useState<any[]>([])
   const [aba, setAba] = useState<"pdv" | "frete">("pdv")
@@ -12,6 +15,14 @@ export default function OrcamentosPage() {
     carregarPedidos()
     carregarFretes()
   }, [])
+
+  const verDetalhes = (id: string, tipo: "pdv" | "frete") => {
+    if (tipo === "pdv") {
+      router.push(`/orcamentos/${id}`)
+    } else {
+      router.push(`/orcamentos/frete/${id}`)
+    }
+  }
 
   async function carregarPedidos() {
     const { data } = await supabase
@@ -113,7 +124,7 @@ export default function OrcamentosPage() {
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a2a4f] text-white">
-              <tr><th className="p-3">Nº</th><th className="p-3">Cliente</th><th className="p-3">Data</th><th className="p-3 text-right">Total</th><th className="p-3">Status</th><th className="p-3">Ações</th></tr>
+              <tr><th className="p-3">Nº</th><th className="p-3">Cliente</th><th className="p-3">Data</th><th className="p-3 text-right">Total</th><th className="p-3">Status</th><th className="p-3">Ações</th><th className="p-3">Detalhes</th></tr>
             </thead>
             <tbody>
               {pedidos.map(p => (
@@ -121,7 +132,7 @@ export default function OrcamentosPage() {
                   <td className="p-3 font-mono">{p.numero_unico}</td>
                   <td className="p-3">{p.clientes?.nome}</td>
                   <td className="p-3">{new Date(p.data).toLocaleDateString()}</td>
-                  <td className="p-3 text-right font-semibold">R$ {p.total.toFixed(2)}</td>
+                  <td className="p-3 text-right font-semibold">{formatCurrency(p.total)}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(p.status)}`}>{getStatusText(p.status)}</span></td>
                   <td className="p-3">
                     <div className="flex gap-2">
@@ -133,10 +144,18 @@ export default function OrcamentosPage() {
                       )}
                       <button onClick={() => excluirOrcamento(p.id, "pdv")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm">🗑️ Excluir</button>
                     </div>
-                  </td>
-                </tr>
+                   </td>
+                  <td className="p-3">
+                    <button 
+                      onClick={() => verDetalhes(p.id, "pdv")}
+                      className="px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    >
+                      👁️ Ver detalhes
+                    </button>
+                   </td>
+                 </tr>
               ))}
-              {pedidos.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-500">Nenhum orçamento encontrado</td></tr>}
+              {pedidos.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-500">Nenhum orçamento encontrado</td></tr>}
             </tbody>
           </table>
         </div>
@@ -146,7 +165,7 @@ export default function OrcamentosPage() {
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a2a4f] text-white">
-              <tr><th className="p-3">Cliente</th><th className="p-3">Origem</th><th className="p-3">Destino</th><th className="p-3 text-right">Total</th><th className="p-3">Data</th><th className="p-3">Status</th><th className="p-3">Ações</th></tr>
+              <tr><th className="p-3">Cliente</th><th className="p-3">Origem</th><th className="p-3">Destino</th><th className="p-3 text-right">Total</th><th className="p-3">Data</th><th className="p-3">Status</th><th className="p-3">Ações</th><th className="p-3">Detalhes</th></tr>
             </thead>
             <tbody>
               {fretes.map(f => (
@@ -154,7 +173,7 @@ export default function OrcamentosPage() {
                   <td className="p-3">{f.cliente}</td>
                   <td className="p-3 truncate max-w-[150px]">{f.origem?.substring(0, 30)}...</td>
                   <td className="p-3 truncate max-w-[150px]">{f.destino?.substring(0, 30)}...</td>
-                  <td className="p-3 text-right font-semibold">R$ {f.total_frete?.toFixed(2)}</td>
+                  <td className="p-3 text-right font-semibold">{formatCurrency(f.total_frete)}</td>
                   <td className="p-3">{new Date(f.created_at).toLocaleDateString()}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(f.status || "pendente")}`}>{getStatusText(f.status || "pendente")}</span></td>
                   <td className="p-3">
@@ -167,10 +186,18 @@ export default function OrcamentosPage() {
                       )}
                       <button onClick={() => excluirOrcamento(f.id, "frete")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm">🗑️ Excluir</button>
                     </div>
-                  </td>
-                </tr>
+                    </td>
+                  <td className="p-3">
+                    <button 
+                      onClick={() => verDetalhes(f.id, "frete")}
+                      className="px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    >
+                      👁️ Ver detalhes
+                    </button>
+                   </td>
+                 </tr>
               ))}
-              {fretes.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-500">Nenhum frete encontrado</td></tr>}
+              {fretes.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-gray-500">Nenhum frete encontrado</td></tr>}
             </tbody>
           </table>
         </div>
