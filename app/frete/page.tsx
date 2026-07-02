@@ -86,7 +86,6 @@ export default function FretePage() {
         return
       }
 
-      // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
       const { error } = await supabase
         .from("fretes_orcamento")
         .insert({
@@ -116,49 +115,97 @@ export default function FretePage() {
         .single()
       const configAtual = configData || config
 
-      // Gerar PDF
+      // ============================================
+      // PDF DO FRETE - TAMANHO AJUSTADO
+      // ============================================
       const element = document.createElement("div")
+      element.style.width = "800px"
+      element.style.margin = "0 auto"
+      element.style.background = "white"
+      element.style.fontFamily = "'Helvetica', Arial, sans-serif"
+      element.style.padding = "20px"
+      
       element.innerHTML = `
-        <div style="width: 800px; margin: 0 auto; background: white; font-family: 'Helvetica', Arial, sans-serif;">
-          <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%);">
-            ${configAtual?.logo_url ? `<img src="${configAtual.logo_url}" style="max-width: 200px; margin: 0 auto 15px auto; display: block;" />` : ""}
-            <h1 style="color: white; margin: 0; font-size: 28px;">${configAtual?.nome_empresa || "Fernandes Sistemas"}</h1>
-            ${configAtual?.telefone ? `<p style="color: #c9a03d; margin: 5px 0 0;">📞 ${configAtual.telefone}</p>` : ""}
+        <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
+          ${configAtual?.logo_url ? `<img src="${configAtual.logo_url}" style="max-width: 200px; margin: 0 auto 20px auto; display: block;" />` : ""}
+          <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px;">${configAtual?.nome_empresa || "Fernandes Sistemas"}</h1>
+          ${configAtual?.telefone ? `<p style="color: #c9a03d; margin: 10px 0 0; font-size: 18px;">📞 ${configAtual.telefone}</p>` : ""}
+        </div>
+        
+        <div style="text-align: center; padding: 30px; border-bottom: 3px solid #c9a03d;">
+          <h2 style="color: #1a2a4f; font-size: 28px; margin: 0; letter-spacing: 3px;">ORÇAMENTO DE FRETE</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 10px 0 0;">Emitido em: ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div style="padding: 30px 40px;">
+          <div style="background: #f8fafc; padding: 25px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #e5e7eb;">
+            <table style="width: 100%; font-size: 16px; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f; width: 120px;">📌 Cliente:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${resultado.cliente}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📍 Origem:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${resultado.origem || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📍 Destino:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${resultado.destino || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📏 Distância:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${resultado.distancia.toFixed(1)} km</td>
+              </tr>
+            </table>
           </div>
           
-          <div style="text-align: center; padding: 20px;">
-            <h2 style="color: #1a2a4f; font-size: 24px; margin: 0;">ORÇAMENTO DE FRETE</h2>
-            <p style="color: #c9a03d; font-size: 14px;">Emitido em: ${new Date().toLocaleDateString()}</p>
+          <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 35px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
+            <h3 style="color: #1a2a4f; margin: 0 0 15px 0; font-size: 20px; letter-spacing: 2px;">💰 TOTAL DO FRETE</h3>
+            <p style="font-size: 48px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">R$ ${resultado.valorFinal.toFixed(2)}</p>
           </div>
           
-          <div style="padding: 0 30px;">
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-              <table style="width: 100%;">
-                <tr><td style="padding: 5px;"><strong>📌 Cliente:</strong></td><td>${resultado.cliente}</td></tr>
-                <tr><td style="padding: 5px;"><strong>📍 Origem:</strong></td><td>${resultado.origem || "—"}</td></tr>
-                <tr><td style="padding: 5px;"><strong>📍 Destino:</strong></td><td>${resultado.destino || "—"}</td></tr>
-                <tr><td style="padding: 5px;"><strong>📏 Distância:</strong></td><td>${resultado.distancia.toFixed(1)} km</td></tr>
-              </table>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 25px;">
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">Combustível</p>
+              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">R$ ${resultado.combustivel.toFixed(2)}</p>
             </div>
-            
-            <div style="background: #c9a03d; text-align: center; padding: 25px; border-radius: 10px; margin: 20px 0;">
-              <h3 style="color: #1a2a4f; margin: 0 0 10px 0;">💰 TOTAL DO FRETE</h3>
-              <p style="font-size: 36px; font-weight: bold; color: white; margin: 0;">R$ ${resultado.valorFinal.toFixed(2)}</p>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">Pedágios</p>
+              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">R$ ${resultado.pedagios.toFixed(2)}</p>
             </div>
-          </div>
-          
-          <div style="text-align: center; padding: 15px; background: #1a2a4f; color: white; margin-top: 20px;">
-            <p style="margin: 0; font-size: 11px;">Este orçamento é válido por 30 dias</p>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">Margem</p>
+              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">${resultado.margem}%</p>
+            </div>
           </div>
         </div>
+        
+        <div style="text-align: center; padding: 20px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 20px;">
+          <p style="margin: 0; font-size: 13px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
+          <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">Gerado automaticamente pelo sistema Fernandes</p>
+        </div>
       `
+
       document.body.appendChild(element)
       await new Promise(resolve => setTimeout(resolve, 500))
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: "#ffffff", useCORS: true })
+
+      // 🔧 CORRIGIDO: Tamanho maior e melhor posicionado
+      const canvas = await html2canvas(element, { 
+        scale: 3,
+        backgroundColor: "#ffffff", 
+        useCORS: true,
+        width: 800,
+        height: element.scrollHeight,
+        windowWidth: 800
+      })
+
       const pdf = new jsPDF("p", "mm", "a4")
       const imgWidth = 190
       const imgHeight = (canvas.height * imgWidth) / canvas.width
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, imgWidth, imgHeight)
+      const xPos = (210 - imgWidth) / 2
+      const yPos = 10
+
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
       pdf.save(`orcamento_frete_${Date.now()}.pdf`)
       document.body.removeChild(element)
 
