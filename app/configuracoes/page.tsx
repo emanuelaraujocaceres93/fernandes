@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabaseClient"
 
 export default function ConfiguracoesPage() {
-  const [nome, setNome] = useState("Fernandes Sistemas")
+  const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
   const [logoUrl, setLogoUrl] = useState("")
   const [carregando, setCarregando] = useState(false)
@@ -17,9 +17,14 @@ export default function ConfiguracoesPage() {
   }, [])
 
   async function carregarConfig() {
-    const { data } = await supabase.from("configuracoes_empresa").select("*").limit(1).maybeSingle()
+    const { data } = await supabase
+      .from("configuracoes_empresa")
+      .select("*")
+      .limit(1)
+      .maybeSingle()
+    
     if (data) {
-      setNome(data.nome_empresa)
+      setNome(data.nome_empresa || "")
       setTelefone(data.telefone || "")
       setLogoUrl(data.logo_url || "")
       setConfigId(data.id)
@@ -31,8 +36,6 @@ export default function ConfiguracoesPage() {
     setMensagem("")
     
     try {
-      const { data: userData } = await supabase.auth.getUser()
-      
       const nomeLimpo = nome.trim().replace(/\s+/g, " ")
       const telefoneLimpo = telefone.trim()
 
@@ -43,23 +46,35 @@ export default function ConfiguracoesPage() {
       }
 
       if (configId) {
-        await supabase.from("configuracoes_empresa").update({
-          nome_empresa: nomeLimpo,
-          telefone: telefoneLimpo,
-        }).eq("id", configId)
+        // UPDATE - sem user_id
+        const { error } = await supabase
+          .from("configuracoes_empresa")
+          .update({
+            nome_empresa: nomeLimpo,
+            telefone: telefoneLimpo,
+          })
+          .eq("id", configId)
+
+        if (error) throw error
       } else {
-        const { data } = await supabase.from("configuracoes_empresa").insert({
-          nome_empresa: nomeLimpo,
-          telefone: telefoneLimpo,
-          user_id: userData.user?.id 
-        }).select()
+        // INSERT - sem user_id (campo não existe na tabela)
+        const { data, error } = await supabase
+          .from("configuracoes_empresa")
+          .insert({
+            nome_empresa: nomeLimpo,
+            telefone: telefoneLimpo,
+          })
+          .select()
+
+        if (error) throw error
         if (data) setConfigId(data[0].id)
       }
       
       setMensagem("✅ Configuração salva com sucesso!")
       setTimeout(() => setMensagem(""), 3000)
     } catch (error) {
-      setMensagem("❌ Erro ao salvar")
+      console.error("Erro ao salvar:", error)
+      setMensagem("❌ Erro ao salvar: " + (error as Error).message)
     } finally {
       setCarregando(false)
     }
@@ -115,14 +130,25 @@ export default function ConfiguracoesPage() {
       const publicUrl = publicUrlData.publicUrl
 
       if (configId) {
-        await supabase.from("configuracoes_empresa").update({ logo_url: publicUrl }).eq("id", configId)
+        // UPDATE - só atualiza a logo, sem user_id
+        const { error } = await supabase
+          .from("configuracoes_empresa")
+          .update({ logo_url: publicUrl })
+          .eq("id", configId)
+
+        if (error) throw error
       } else {
-        const { data: newConfig } = await supabase.from("configuracoes_empresa").insert({ 
-          nome_empresa: nome.trim().replace(/\s+/g, " "),
-          telefone: telefone.trim(),
-          logo_url: publicUrl,
-          user_id: userData.user.id 
-        }).select()
+        // INSERT - sem user_id
+        const { data: newConfig, error } = await supabase
+          .from("configuracoes_empresa")
+          .insert({ 
+            nome_empresa: nome.trim().replace(/\s+/g, " "),
+            telefone: telefone.trim(),
+            logo_url: publicUrl
+          })
+          .select()
+
+        if (error) throw error
         if (newConfig) setConfigId(newConfig[0].id)
       }
 
@@ -131,6 +157,7 @@ export default function ConfiguracoesPage() {
       setTimeout(() => setMensagem(""), 3000)
       
     } catch (error) {
+      console.error("Erro no upload:", error)
       alert("Erro ao fazer upload: " + String(error))
     } finally {
       setUploading(false)
@@ -140,23 +167,42 @@ export default function ConfiguracoesPage() {
   async function removerLogo() {
     if (!logoUrl) return
     
-    if (confirm("Tem certeza que deseja remover o logo?")) {
+    if (!confirm("Tem certeza que deseja remover o logo?")) return
+
+    try {
       const filePath = logoUrl.split("/").pop()
       
       if (filePath) {
         await supabase.storage.from("logos").remove([filePath])
       }
       
-      await supabase.from("configuracoes_empresa").update({ logo_url: null }).eq("id", configId)
+      const { error } = await supabase
+        .from("configuracoes_empresa")
+        .update({ logo_url: null })
+        .eq("id", configId)
+
+      if (error) throw error
+
       setLogoUrl("")
       setMensagem("✅ Logo removido com sucesso!")
       setTimeout(() => setMensagem(""), 3000)
+    } catch (error) {
+      console.error("Erro ao remover logo:", error)
+      alert("Erro ao remover logo: " + String(error))
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-[#1a2a4f] mb-6">⚙️ Configurações</h1>
+      
+      {mensagem && (
+        <div className={`mb-4 p-3 rounded-lg text-center ${
+          mensagem.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+        }`}>
+          {mensagem}
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">🏢 Informações da Empresa</h2>
@@ -165,9 +211,10 @@ export default function ConfiguracoesPage() {
           <label className="block text-gray-700 font-medium mb-1">🏷️ Nome da Empresa</label>
           <input 
             type="text" 
-            className="w-full p-3 border border-gray-300 rounded-lg"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a2a4f] focus:border-transparent"
             value={nome} 
             onChange={e => setNome(e.target.value)}
+            placeholder="Nome da sua empresa"
           />
         </div>
         
@@ -176,7 +223,7 @@ export default function ConfiguracoesPage() {
           <input 
             type="text" 
             placeholder="(11) 99999-9999"
-            className="w-full p-3 border border-gray-300 rounded-lg"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a2a4f] focus:border-transparent"
             value={telefone} 
             onChange={e => setTelefone(e.target.value)}
           />
@@ -186,7 +233,7 @@ export default function ConfiguracoesPage() {
         <button 
           onClick={salvarConfiguracao} 
           disabled={carregando} 
-          className="w-full py-3 bg-[#1a2a4f] text-white font-semibold rounded-lg"
+          className="w-full py-3 bg-[#1a2a4f] text-white font-semibold rounded-lg hover:bg-[#24375f] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {carregando ? "Salvando..." : "💾 Salvar Configurações"}
         </button>
@@ -201,10 +248,13 @@ export default function ConfiguracoesPage() {
               src={logoUrl} 
               alt="Logo da empresa" 
               className="max-w-[300px] max-h-[150px] object-contain mx-auto mb-3"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none'
+              }}
             />
             <button 
               onClick={removerLogo}
-              className="text-sm text-red-600 hover:text-red-800"
+              className="text-sm text-red-600 hover:text-red-800 transition"
             >
               🗑️ Remover logo
             </button>
@@ -217,7 +267,9 @@ export default function ConfiguracoesPage() {
         )}
         
         <div className="flex items-center justify-center w-full">
-          <label className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 border-gray-300 hover:border-[#c9a03d]">
+          <label className={`w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition ${
+            uploading ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 hover:border-[#c9a03d]'
+          }`}>
             <div className="flex flex-col items-center justify-center">
               <svg className="w-8 h-8 mb-3 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                 <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
@@ -239,17 +291,10 @@ export default function ConfiguracoesPage() {
         
         {uploading && (
           <div className="mt-4 text-center text-gray-600">
-            Enviando logo...
+            <span className="inline-block animate-pulse">⏳</span> Enviando logo...
           </div>
         )}
       </div>
-      
-      {mensagem && (
-        <div className="mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
-          {mensagem}
-        </div>
-      )}
     </div>
   )
 }
-
