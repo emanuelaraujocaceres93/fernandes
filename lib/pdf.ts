@@ -50,44 +50,35 @@ async function carregarImagemBase64(url: string): Promise<string | null> {
   }
 }
 
-// 🔧 FUNÇÃO CORRIGIDA - SEM DUPLICAÇÃO
-function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null, logoBase64?: string | null) {
+function addHeader(doc: jsPDF, config?: EmpresaConfig | null, logoBase64?: string | null) {
   // Fundo principal
   doc.setFillColor(primary)
-  doc.rect(0, 0, 210, 50, "F")
+  doc.rect(0, 0, 210, 55, "F")
   
-  // Logo (se houver)
+  // Logo (centralizada e maior)
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 14, 8, 35, 35)
+      // Centralizar a logo (210mm / 2 = 105mm, menos metade do tamanho)
+      const logoWidth = 50
+      const logoHeight = 50
+      const logoX = (210 - logoWidth) / 2
+      doc.addImage(logoBase64, 'PNG', logoX, 3, logoWidth, logoHeight)
     } catch (e) {
       console.error("Erro ao adicionar logo:", e)
     }
   }
   
-  // Nome da empresa
+  // Nome da empresa - centralizado
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(22)
-  const nomeX = logoBase64 ? 56 : 14
-  doc.text(config?.nome_empresa || "Fernandes Sistemas", nomeX, 22)
-  
-  // Telefone - abaixo do nome
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.setTextColor("#c9a03d")
-  doc.text(config?.telefone || "Sistema de gestão comercial", nomeX, 32)
-
-  // Título do documento (alinhado à direita)
-  doc.setTextColor(accent)
-  doc.setFont("helvetica", "bold")
   doc.setFontSize(16)
-  doc.text(title.toUpperCase(), 196, 22, { align: "right" })
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", 105, 42, { align: "center" })
   
-  // Linha decorativa
-  doc.setDrawColor(accent)
-  doc.setLineWidth(1)
-  doc.line(14, 45, 196, 45)
+  // Telefone - centralizado abaixo do nome
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  doc.setTextColor("#c9a03d")
+  doc.text(config?.telefone || "Sistema de gestão comercial", 105, 50, { align: "center" })
 }
 
 function addFooter(doc: jsPDF) {
@@ -116,37 +107,43 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     minute: "2-digit"
   }).format(new Date())
 
-  addHeader(doc, input.titulo, input.config, logoBase64)
+  // HEADER - sem título duplicado
+  addHeader(doc, input.config, logoBase64)
 
-  // Título
+  // Título "ORÇAMENTO" - centralizado, abaixo do header
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(24)
-  doc.text(input.titulo, 14, 68)
+  doc.setFontSize(22)
+  doc.text("ORÇAMENTO", 105, 72, { align: "center" })
 
-  // Data e número
-  doc.setFontSize(10)
+  // Linha decorativa abaixo do título
+  doc.setDrawColor(accent)
+  doc.setLineWidth(0.5)
+  doc.line(60, 78, 150, 78)
+
+  // Data e número - alinhados à direita
+  doc.setFontSize(9)
   doc.setFont("helvetica", "normal")
   doc.setTextColor(muted)
-  doc.text(`Emissão: ${issuedAt}`, 14, 78)
+  doc.text(`Emissão: ${issuedAt}`, 196, 88, { align: "right" })
   if (input.numero) {
-    doc.text(`Número: ${input.numero}`, 196, 78, { align: "right" })
+    doc.text(`Número: ${input.numero}`, 196, 95, { align: "right" })
   }
 
   // BOX DO CLIENTE
   doc.setDrawColor("#e5e7eb")
   doc.setFillColor(lightBg)
-  doc.roundedRect(14, 88, 182, 30, 3, 3, "FD")
+  doc.roundedRect(14, 105, 182, 30, 3, 3, "FD")
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.text("CLIENTE", 20, 98)
+  doc.text("CLIENTE", 20, 115)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(12)
   doc.setTextColor("#1a1a1a")
-  doc.text(input.cliente, 20, 110)
+  doc.text(input.cliente, 20, 127)
 
-  let yAtual = 130
+  let yAtual = 148
 
   // EXTRAIR DADOS DOS DETALHES
   let statusText = "Pendente"
@@ -268,8 +265,9 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     if (yAtual > 255) {
       addFooter(doc)
       doc.addPage()
-      addHeader(doc, input.titulo, input.config, logoBase64)
+      addHeader(doc, input.config, logoBase64)
       yAtual = 60
+      // Recriar cabeçalho da tabela
       doc.setFillColor(primary)
       doc.rect(14, yAtual - 8, 182, 12, "F")
       doc.setTextColor("#ffffff")
