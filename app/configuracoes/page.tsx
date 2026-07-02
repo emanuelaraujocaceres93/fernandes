@@ -46,7 +46,6 @@ export default function ConfiguracoesPage() {
       }
 
       if (configId) {
-        // UPDATE - sem user_id
         const { error } = await supabase
           .from("configuracoes_empresa")
           .update({
@@ -57,7 +56,6 @@ export default function ConfiguracoesPage() {
 
         if (error) throw error
       } else {
-        // INSERT - sem user_id (campo não existe na tabela)
         const { data, error } = await supabase
           .from("configuracoes_empresa")
           .insert({
@@ -99,17 +97,12 @@ export default function ConfiguracoesPage() {
     setMensagem("")
 
     try {
-      const { data: userData } = await supabase.auth.getUser()
-      
-      if (!userData.user) {
-        alert("Você precisa estar logado para fazer upload")
-        setUploading(false)
-        return
-      }
-
+      // 🔧 CORREÇÃO: Usar um caminho fixo em vez do user.id
+      // O user.id pode ser null ou não estar disponível
       const fileExt = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg"
-      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`
+      const filePath = `logos/${Date.now()}.${fileExt}`
 
+      // Upload com Content-Type correto
       const { error: uploadError } = await supabase.storage
         .from("logos")
         .upload(filePath, file, {
@@ -123,14 +116,15 @@ export default function ConfiguracoesPage() {
         return
       }
 
+      // Pegar a URL pública
       const { data: publicUrlData } = supabase.storage
         .from("logos")
         .getPublicUrl(filePath)
 
       const publicUrl = publicUrlData.publicUrl
 
+      // Salvar a URL no banco
       if (configId) {
-        // UPDATE - só atualiza a logo, sem user_id
         const { error } = await supabase
           .from("configuracoes_empresa")
           .update({ logo_url: publicUrl })
@@ -138,7 +132,6 @@ export default function ConfiguracoesPage() {
 
         if (error) throw error
       } else {
-        // INSERT - sem user_id
         const { data: newConfig, error } = await supabase
           .from("configuracoes_empresa")
           .insert({ 
@@ -170,7 +163,9 @@ export default function ConfiguracoesPage() {
     if (!confirm("Tem certeza que deseja remover o logo?")) return
 
     try {
-      const filePath = logoUrl.split("/").pop()
+      // Extrair o caminho do arquivo da URL
+      const urlParts = logoUrl.split('/')
+      const filePath = urlParts.slice(urlParts.indexOf('logos')).join('/')
       
       if (filePath) {
         await supabase.storage.from("logos").remove([filePath])
