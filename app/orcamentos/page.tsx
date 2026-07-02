@@ -56,7 +56,7 @@ export default function OrcamentosPage() {
   }
 
   // ============================================
-  // REGENERAR PDF - PDV
+  // REGENERAR PDF - PDV (COM DETALHES)
   // ============================================
   async function regenerarPDF(pedidoId: string) {
     setRegenerando(pedidoId)
@@ -85,9 +85,31 @@ export default function OrcamentosPage() {
         total: Number(item.subtotal) || 0,
       }))
 
+      // 🔧 RECUPERAR DETALHES DO JSON
+      const detalhes = pedido.detalhes || {}
       const detalhesAdicionais: Array<[string, string]> = [
         ["Status", pedido.status || "Pendente"]
       ]
+
+      // Adicionar serviços extras se existirem
+      if (detalhes.servicosExtrasTotal > 0) {
+        detalhesAdicionais.push(["Serviços Extras", formatCurrency(detalhes.servicosExtrasTotal)])
+        if (detalhes.servicosExtrasLista) {
+          for (const servico of detalhes.servicosExtrasLista) {
+            detalhesAdicionais.push([`  • ${servico}`, ""])
+          }
+        }
+      }
+
+      // Adicionar observações
+      if (detalhes.observacoes) {
+        detalhesAdicionais.push(["Observações", detalhes.observacoes])
+      }
+
+      // Adicionar materiais
+      if (detalhes.materiaisTotal > 0) {
+        detalhesAdicionais.push(["Materiais adicionais", formatCurrency(detalhes.materiaisTotal)])
+      }
 
       saveQuotePdf(
         {

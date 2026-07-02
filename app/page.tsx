@@ -198,7 +198,11 @@ export default function PDV() {
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error("Sessão expirada.")
 
-      // 🔧 CORRIGIDO: user_id existe, então podemos enviar
+      // 🔧 SALVANDO DETALHES NO PEDIDO
+      const servicosSelecionadosLista = servicosExtras
+        .filter(s => servicosSelecionados[s.id])
+        .map(s => s.nome)
+
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
         .insert({
@@ -206,6 +210,18 @@ export default function PDV() {
           total: totalGeralCompleto,
           status: "pendente",
           user_id: userData.user.id,
+          detalhes: {
+            servicosExtrasTotal: totalServicosExtras,
+            servicosExtrasLista: servicosSelecionadosLista,
+            observacoes: observacoes,
+            materiaisTotal: totalMateriais,
+            itens: carrinho.map(item => ({
+              nome: item.nome,
+              tipo: item.tipo,
+              quantidade: item.quantidade,
+              valor_venda: item.valor_venda
+            }))
+          }
         })
         .select()
         .single()

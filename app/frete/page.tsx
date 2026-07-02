@@ -116,7 +116,7 @@ export default function FretePage() {
       const configAtual = configData || config
 
       // ============================================
-      // PDF DO FRETE - TAMANHO AJUSTADO
+      // PDF DO FRETE - SEM INFORMAÇÕES INTERNAS
       // ============================================
       const element = document.createElement("div")
       element.style.width = "800px"
@@ -159,37 +159,34 @@ export default function FretePage() {
             </table>
           </div>
           
+          <!-- TOTAL DO FRETE - DESTAQUE -->
           <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 35px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
             <h3 style="color: #1a2a4f; margin: 0 0 15px 0; font-size: 20px; letter-spacing: 2px;">💰 TOTAL DO FRETE</h3>
             <p style="font-size: 48px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">R$ ${resultado.valorFinal.toFixed(2)}</p>
           </div>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 25px;">
+          <!-- INFORMAÇÕES ADICIONAIS ÚTEIS (SEM DETALHES INTERNOS) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px;">
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">Combustível</p>
-              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">R$ ${resultado.combustivel.toFixed(2)}</p>
+              <p style="color: #64748b; font-size: 12px; margin: 0;">📏 Distância</p>
+              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">${resultado.distancia.toFixed(1)} km</p>
             </div>
             <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">Pedágios</p>
-              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">R$ ${resultado.pedagios.toFixed(2)}</p>
-            </div>
-            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">Margem</p>
-              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">${resultado.margem}%</p>
+              <p style="color: #64748b; font-size: 12px; margin: 0;">📅 Emissão</p>
+              <p style="font-weight: bold; color: #1a2a4f; font-size: 16px; margin: 5px 0 0;">${new Date().toLocaleDateString()}</p>
             </div>
           </div>
         </div>
         
         <div style="text-align: center; padding: 20px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 20px;">
           <p style="margin: 0; font-size: 13px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
-          <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">Gerado automaticamente pelo sistema Fernandes</p>
+          <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">${configAtual?.nome_empresa || "Fernandes Sistemas"} - Orçamento de Frete</p>
         </div>
       `
 
       document.body.appendChild(element)
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      // 🔧 CORRIGIDO: Tamanho maior e melhor posicionado
       const canvas = await html2canvas(element, { 
         scale: 3,
         backgroundColor: "#ffffff", 

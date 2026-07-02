@@ -70,13 +70,30 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   }
   const statusColor = statusColors[statusText.toLowerCase()] || "#f3f4f6"
 
+  // 🔧 FILTRAR ITENS VÁLIDOS (sem duplicação)
+  const itensValidos = input.linhas.filter(line => 
+    line.descricao && 
+    line.descricao.trim() !== "" &&
+    line.descricao !== "undefined" &&
+    line.descricao !== "null"
+  )
+
+  // 🔧 REMOVER DUPLICADAS (usando Set)
+  const itensUnicos = []
+  const descricoesVistas = new Set()
+  for (const item of itensValidos) {
+    const chave = item.descricao + item.quantidade + item.unitario + item.total
+    if (!descricoesVistas.has(chave)) {
+      descricoesVistas.add(chave)
+      itensUnicos.push(item)
+    }
+  }
+
   // Montar linhas da tabela
   let tabelaHTML = ""
-  const itensValidos = input.linhas.filter(line => line.descricao && line.descricao.trim() !== "")
-  
-  if (itensValidos.length > 0) {
+  if (itensUnicos.length > 0) {
     let linhaCount = 0
-    for (const line of itensValidos) {
+    for (const line of itensUnicos) {
       const bgColor = linhaCount % 2 === 0 ? "#fafafa" : "white"
       tabelaHTML += `
         <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
@@ -93,7 +110,9 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   // Serviços extras lista
   let servicosHTML = ""
   if (servicosExtrasLista.length > 0) {
-    for (const servico of servicosExtrasLista) {
+    // Remover duplicatas na lista de serviços
+    const servicosUnicos = [...new Set(servicosExtrasLista)]
+    for (const servico of servicosUnicos) {
       servicosHTML += `<li style="margin: 2px 0; font-size: 12px; color: #4a4a4a; list-style: none; padding-left: 16px;">• ${servico}</li>`
     }
   }
@@ -109,7 +128,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     `
   }
 
-  // 🔧 LOGO MAIOR (igual ao frete - max-width: 150px)
   element.innerHTML = `
     <!-- HEADER -->
     <div style="text-align: center; padding: 35px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
@@ -156,8 +174,8 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     <!-- OBSERVAÇÕES -->
     ${observacoesHTML}
     
-    <!-- TABELA DE PRODUTOS -->
-    ${itensValidos.length > 0 ? `
+    <!-- 🔧 TABELA DE PRODUTOS (APENAS UMA VEZ) -->
+    ${tabelaHTML ? `
       <div style="margin-top: 15px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead style="background: #1a2a4f; color: white;">
@@ -175,13 +193,13 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       </div>
     ` : ""}
     
-    <!-- TOTAL GERAL -->
+    <!-- 🔧 TOTAL GERAL (APENAS UMA VEZ) -->
     <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 16px 20px; border-radius: 10px; margin: 15px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
       <p style="color: #1a2a4f; font-size: 14px; font-weight: bold; margin: 0 0 5px 0; letter-spacing: 2px;">TOTAL GERAL</p>
       <p style="font-size: 32px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
     </div>
     
-    <!-- 🔧 FOOTER - CORRIGIDO (SEM DUPLICAÇÃO) -->
+    <!-- FOOTER -->
     <div style="text-align: center; padding: 12px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 10px;">
       <p style="margin: 0; font-size: 11px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
       <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b;">${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento</p>
