@@ -51,41 +51,38 @@ async function carregarImagemBase64(url: string): Promise<string | null> {
 }
 
 // ============================================
-// HEADER - LIMPO E SEM DUPLICAÇÕES
+// HEADER - IDÊNTICO AO DO FRETE
 // ============================================
 function addHeader(doc: jsPDF, config?: EmpresaConfig | null, logoBase64?: string | null) {
-  // Fundo
+  // Fundo com gradiente simulado
   doc.setFillColor(primary)
-  doc.rect(0, 0, 210, 45, "F")
+  doc.rect(0, 0, 210, 55, "F")
   
-  // Logo (se houver)
+  // Logo (se houver) - centralizada e maior
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 14, 5, 32, 35)
+      const logoWidth = 50
+      const logoHeight = 50
+      const logoX = (210 - logoWidth) / 2
+      doc.addImage(logoBase64, 'PNG', logoX, 3, logoWidth, logoHeight)
     } catch (e) {
       console.error("Erro ao adicionar logo:", e)
     }
   }
   
-  // Nome da empresa - apenas uma vez
+  // Nome da empresa - centralizado
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
-  const nomeX = logoBase64 ? 54 : 14
-  const nomeY = logoBase64 ? 22 : 20
-  doc.text(config?.nome_empresa || "Fernandes Sistemas", nomeX, nomeY)
+  doc.setFontSize(20)
+  const nomeY = logoBase64 ? 56 : 20
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", 105, nomeY, { align: "center" })
   
-  // Telefone - apenas uma vez
+  // Telefone - centralizado
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
+  doc.setFontSize(10)
   doc.setTextColor("#c9a03d")
-  const telY = logoBase64 ? 32 : 30
-  doc.text(config?.telefone || "Sistema de gestão comercial", nomeX, telY)
-
-  // Linha decorativa
-  doc.setDrawColor(accent)
-  doc.setLineWidth(0.8)
-  doc.line(14, 40, 196, 40)
+  const telefoneY = logoBase64 ? 64 : 30
+  doc.text(config?.telefone || "Sistema de gestão comercial", 105, telefoneY, { align: "center" })
 }
 
 function addFooter(doc: jsPDF) {
@@ -118,44 +115,46 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   addHeader(doc, input.config, logoBase64)
 
   // ============================================
-  // TÍTULO "ORÇAMENTO" - APENAS UMA VEZ
+  // TÍTULO "ORÇAMENTO" - centralizado
   // ============================================
+  const startY = logoBase64 ? 80 : 68
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(22)
-  doc.text("ORÇAMENTO", 105, 62, { align: "center" })
+  doc.setFontSize(24)
+  doc.text("ORÇAMENTO", 105, startY, { align: "center" })
 
   // Linha decorativa abaixo do título
   doc.setDrawColor(accent)
-  doc.setLineWidth(0.5)
-  doc.line(70, 68, 140, 68)
+  doc.setLineWidth(0.8)
+  doc.line(60, startY + 6, 150, startY + 6)
 
   // Informações do documento
   doc.setTextColor(muted)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
-  doc.text(`Emissão: ${issuedAt}`, 14, 78)
+  doc.setFontSize(10)
+  const infoY = startY + 18
+  doc.text(`Emissão: ${issuedAt}`, 14, infoY)
   if (input.numero) {
-    doc.text(`Número: ${input.numero}`, 196, 78, { align: "right" })
+    doc.text(`Número: ${input.numero}`, 196, infoY, { align: "right" })
   }
 
   // ============================================
   // BOX DO CLIENTE
   // ============================================
-  const clienteY = 88
+  const clienteY = infoY + 14
   doc.setDrawColor("#e5e7eb")
   doc.setFillColor(lightBg)
-  doc.roundedRect(14, clienteY, 182, 28, 3, 3, "FD")
+  doc.roundedRect(14, clienteY, 182, 30, 3, 3, "FD")
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
   doc.text("CLIENTE", 20, clienteY + 10)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(11)
+  doc.setFontSize(12)
   doc.setTextColor("#1a1a1a")
-  doc.text(input.cliente, 20, clienteY + 21)
+  doc.text(input.cliente, 20, clienteY + 22)
 
-  let yAtual = clienteY + 40
+  let yAtual = clienteY + 42
 
   // ============================================
   // EXTRAIR DADOS DOS DETALHES
@@ -188,39 +187,39 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const statusColor = statusColors[statusText.toLowerCase()] || "#f3f4f6"
   
   doc.setFillColor(statusColor)
-  doc.roundedRect(14, yAtual, 88, 22, 3, 3, "FD")
+  doc.roundedRect(14, yAtual, 88, 24, 3, 3, "FD")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
   doc.setTextColor(primary)
-  doc.text("STATUS", 20, yAtual + 7)
+  doc.text("STATUS", 20, yAtual + 8)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
+  doc.setFontSize(11)
   doc.setTextColor("#1a1a1a")
-  doc.text(statusText, 20, yAtual + 17)
+  doc.text(statusText, 20, yAtual + 18)
   
   // ============================================
   // SERVIÇOS EXTRAS (total)
   // ============================================
   if (servicosExtrasTotal > 0) {
     doc.setFillColor("#fef3c7")
-    doc.roundedRect(108, yAtual, 88, 22, 3, 3, "FD")
+    doc.roundedRect(108, yAtual, 88, 24, 3, 3, "FD")
     doc.setFont("helvetica", "bold")
     doc.setFontSize(9)
     doc.setTextColor(primary)
-    doc.text("SERVIÇOS EXTRAS", 114, yAtual + 7)
+    doc.text("SERVIÇOS EXTRAS", 114, yAtual + 8)
     doc.setFont("helvetica", "normal")
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setTextColor(accent)
-    doc.text(money(servicosExtrasTotal), 114, yAtual + 17)
+    doc.text(money(servicosExtrasTotal), 114, yAtual + 18)
   }
   
-  yAtual += 28
+  yAtual += 32
 
   // ============================================
   // LISTA DE SERVIÇOS EXTRAS
   // ============================================
   if (servicosExtrasLista.length > 0) {
-    const altura = 10 + (servicosExtrasLista.length * 5)
+    const altura = 12 + (servicosExtrasLista.length * 5.5)
     if (yAtual + altura > 260) {
       doc.addPage()
       addHeader(doc, input.config, logoBase64)
@@ -233,18 +232,18 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(9)
     doc.setTextColor(primary)
-    doc.text("SERVIÇOS CONTRATADOS:", 20, yAtual + 6)
+    doc.text("SERVIÇOS CONTRATADOS:", 20, yAtual + 7)
     
     doc.setFont("helvetica", "normal")
     doc.setFontSize(8)
     doc.setTextColor("#4a4a4a")
-    let yServico = yAtual + 12
+    let yServico = yAtual + 14
     for (const servico of servicosExtrasLista) {
       doc.text(`• ${servico}`, 20, yServico)
-      yServico += 5
+      yServico += 5.5
     }
     
-    yAtual += altura + 6
+    yAtual += altura + 8
   }
 
   // ============================================
@@ -252,7 +251,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   // ============================================
   if (observacoesText && observacoesText.trim() !== "") {
     const linhasObs = doc.splitTextToSize(observacoesText, 170)
-    const alturaObs = Math.max(18, linhasObs.length * 5 + 10)
+    const alturaObs = Math.max(20, linhasObs.length * 5 + 12)
     
     if (yAtual + alturaObs > 260) {
       doc.addPage()
@@ -271,15 +270,15 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     doc.setFont("helvetica", "normal")
     doc.setFontSize(9)
     doc.setTextColor("#333333")
-    doc.text(linhasObs, 20, yAtual + 15)
+    doc.text(linhasObs, 20, yAtual + 16)
     
-    yAtual += alturaObs + 6
+    yAtual += alturaObs + 8
   }
 
   // ============================================
   // TABELA DE PRODUTOS
   // ============================================
-  yAtual += 10
+  yAtual += 12
 
   const itensValidos = input.linhas.filter(line => line.descricao && line.descricao.trim() !== "")
   
@@ -290,6 +289,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       yAtual = 60
     }
     
+    // Cabeçalho da tabela
     doc.setFillColor(primary)
     doc.rect(14, yAtual - 8, 182, 12, "F")
     doc.setTextColor("#ffffff")
@@ -312,6 +312,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
         addHeader(doc, input.config, logoBase64)
         yAtual = 60
         
+        // Recriar cabeçalho na nova página
         doc.setFillColor(primary)
         doc.rect(14, yAtual - 8, 182, 12, "F")
         doc.setTextColor("#ffffff")
@@ -350,7 +351,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   // ============================================
   // TOTAL GERAL - DESTAQUE
   // ============================================
-  yAtual += 12
+  yAtual += 14
   if (yAtual + 30 > 280) {
     doc.addPage()
     addHeader(doc, input.config, logoBase64)
@@ -358,14 +359,17 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   }
   
   doc.setFillColor(accent)
-  doc.roundedRect(118, yAtual, 78, 24, 3, 3, "F")
+  doc.roundedRect(118, yAtual, 78, 28, 3, 3, "F")
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(10)
-  doc.text("TOTAL GERAL", 124, yAtual + 9)
-  doc.setFontSize(16)
-  doc.text(money(input.total), 192, yAtual + 17, { align: "right" })
+  doc.setFontSize(11)
+  doc.text("TOTAL GERAL", 124, yAtual + 10)
+  doc.setFontSize(18)
+  doc.text(money(input.total), 192, yAtual + 19, { align: "right" })
 
+  // ============================================
+  // FOOTER
+  // ============================================
   addFooter(doc)
   doc.save(filename)
 }
