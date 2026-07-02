@@ -212,12 +212,13 @@ export default function PDV() {
 
       if (pedidoError || !pedido) throw new Error(pedidoError?.message || "Erro ao salvar pedido.")
 
+      // 🔧 CORRIGIDO: preco_unitario e subtotal (NÃO unitario e total)
       const itens = carrinho.map((item) => ({
         pedido_id: pedido.id,
         produto_id: item.id,
         quantidade: item.quantidade,
-        unitario: Number(item.valor_venda) || 0,
-        total: (Number(item.valor_venda) || 0) * item.quantidade,
+        preco_unitario: Number(item.valor_venda) || 0,
+        subtotal: (Number(item.valor_venda) || 0) * item.quantidade,
       }))
 
       if (itens.length > 0) {
