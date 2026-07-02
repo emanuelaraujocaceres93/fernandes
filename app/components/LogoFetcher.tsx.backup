@@ -1,13 +1,12 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface EmpresaConfig {
-    id?: string;
-    nome_empresa?: string | null;
-    telefone?: string | null;
-    logo_url?: string | null;
+    nome: string;
+    telefone: string;
+    logo_url: string | null;
     endereco?: string;
     email?: string;
 }
@@ -15,6 +14,7 @@ interface EmpresaConfig {
 export function useEmpresaConfig() {
     const [config, setConfig] = useState<EmpresaConfig | null>(null);
     const [loading, setLoading] = useState(true);
+    const supabase = createClientComponentClient();
 
     useEffect(() => {
         async function fetchConfig() {
@@ -22,7 +22,7 @@ export function useEmpresaConfig() {
                 const { data, error } = await supabase
                     .from('configuracoes_empresa')
                     .select('*')
-                    .maybeSingle();
+                    .single();
 
                 if (error) throw error;
                 setConfig(data);
@@ -30,7 +30,7 @@ export function useEmpresaConfig() {
                 console.error('Erro ao buscar configurações:', error);
                 // Configuração padrão
                 setConfig({
-                    nome_empresa: 'Fernandes clima e conforto',
+                    nome: 'Fernandes clima e conforto',
                     telefone: '99547-9729',
                     logo_url: null
                 });
@@ -40,7 +40,7 @@ export function useEmpresaConfig() {
         }
 
         fetchConfig();
-    }, []);
+    }, [supabase]);
 
     return { config, loading };
 }
