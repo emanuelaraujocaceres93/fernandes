@@ -52,7 +52,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   }
 
   // ============================================
-  // GERAR HTML DO PDF
+  // GERAR HTML DO PDF (SEM RODAPÉ)
   // ============================================
   const element = document.createElement("div")
   element.style.width = "800px"
@@ -70,7 +70,8 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   }
   const statusColor = statusColors[statusText.toLowerCase()] || "#f3f4f6"
 
-  // 🔧 FILTRAR ITENS VÁLIDOS (sem duplicação)
+  // Montar linhas da tabela
+  let tabelaHTML = ""
   const itensValidos = input.linhas.filter(line => 
     line.descricao && 
     line.descricao.trim() !== "" &&
@@ -78,7 +79,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     line.descricao !== "null"
   )
 
-  // 🔧 REMOVER DUPLICADAS (usando Set)
+  // Remover duplicatas
   const itensUnicos = []
   const descricoesVistas = new Set()
   for (const item of itensValidos) {
@@ -89,8 +90,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     }
   }
 
-  // Montar linhas da tabela
-  let tabelaHTML = ""
   if (itensUnicos.length > 0) {
     let linhaCount = 0
     for (const line of itensUnicos) {
@@ -110,7 +109,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   // Serviços extras lista
   let servicosHTML = ""
   if (servicosExtrasLista.length > 0) {
-    // Remover duplicatas na lista de serviços
     const servicosUnicos = [...new Set(servicosExtrasLista)]
     for (const servico of servicosUnicos) {
       servicosHTML += `<li style="margin: 2px 0; font-size: 12px; color: #4a4a4a; list-style: none; padding-left: 16px;">• ${servico}</li>`
@@ -128,6 +126,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     `
   }
 
+  // 🔧 HTML SEM RODAPÉ (o rodapé será adicionado pelo jsPDF)
   element.innerHTML = `
     <!-- HEADER -->
     <div style="text-align: center; padding: 35px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
@@ -174,7 +173,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     <!-- OBSERVAÇÕES -->
     ${observacoesHTML}
     
-    <!-- 🔧 TABELA DE PRODUTOS (APENAS UMA VEZ) -->
+    <!-- TABELA DE PRODUTOS -->
     ${tabelaHTML ? `
       <div style="margin-top: 15px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
@@ -193,17 +192,13 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       </div>
     ` : ""}
     
-    <!-- 🔧 TOTAL GERAL (APENAS UMA VEZ) -->
+    <!-- TOTAL GERAL -->
     <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 16px 20px; border-radius: 10px; margin: 15px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
       <p style="color: #1a2a4f; font-size: 14px; font-weight: bold; margin: 0 0 5px 0; letter-spacing: 2px;">TOTAL GERAL</p>
       <p style="font-size: 32px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
     </div>
     
-    <!-- FOOTER -->
-    <div style="text-align: center; padding: 12px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 10px;">
-      <p style="margin: 0; font-size: 11px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
-      <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b;">${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento</p>
-    </div>
+    <!-- 🔧 SEM RODAPÉ NO HTML - será adicionado pelo jsPDF -->
   `
 
   document.body.appendChild(element)
@@ -227,22 +222,43 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const pageHeight = 277
   const imgHeightMM = imgHeight
 
+  // 🔧 FUNÇÃO PARA ADICIONAR RODAPÉ EM CADA PÁGINA
+  function addFooterToPage(doc: jsPDF, pageNum: number) {
+    const yPos = 285
+    doc.setFillColor("#1a2a4f")
+    doc.rect(0, yPos, 210, 12, "F")
+    doc.setTextColor("#ffffff")
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.text("Este orçamento é válido por 30 dias", 105, yPos + 6, { align: "center" })
+    doc.setFontSize(6)
+    doc.text(`${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento`, 105, yPos + 10, { align: "center" })
+  }
+
   if (imgHeightMM > pageHeight) {
     let heightLeft = imgHeightMM
     let position = 0
+    let pageNum = 1
 
+    // Primeira página
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
+    addFooterToPage(pdf, pageNum)
     heightLeft -= pageHeight
+    pageNum++
 
+    // Páginas adicionais
     while (heightLeft > 0) {
       position = heightLeft - imgHeightMM
       pdf.addPage()
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
+      addFooterToPage(pdf, pageNum)
       heightLeft -= pageHeight
+      pageNum++
     }
   } else {
     const xPos = (210 - imgWidth) / 2
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, 10, imgWidth, imgHeight)
+    addFooterToPage(pdf, 1)
   }
 
   pdf.save(filename)
