@@ -4,17 +4,30 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabaseClient"
 import { formatCurrency } from "../../lib/format"
 import { useRouter } from "next/navigation"
+import { saveQuotePdf } from "../../lib/pdf"
 
 export default function OrcamentosPage() {
   const router = useRouter()
   const [pedidos, setPedidos] = useState<any[]>([])
   const [fretes, setFretes] = useState<any[]>([])
   const [aba, setAba] = useState<"pdv" | "frete">("pdv")
+  const [regenerando, setRegenerando] = useState<string | null>(null)
+  const [config, setConfig] = useState<any>(null)
 
   useEffect(() => {
     carregarPedidos()
     carregarFretes()
+    carregarConfig()
   }, [])
+
+  async function carregarConfig() {
+    const { data } = await supabase
+      .from("configuracoes_empresa")
+      .select("*")
+      .limit(1)
+      .maybeSingle()
+    if (data) setConfig(data)
+  }
 
   const verDetalhes = (id: string, tipo: "pdv" | "frete") => {
     if (tipo === "pdv") {
@@ -33,12 +46,67 @@ export default function OrcamentosPage() {
   }
 
   async function carregarFretes() {
-    // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
     const { data } = await supabase
       .from("fretes_orcamento")
       .select("*")
       .order("created_at", { ascending: false })
     if (data) setFretes(data)
+  }
+
+  // 🔧 FUNÇÃO PARA REGENERAR PDF
+  async function regenerarPDF(pedidoId: string) {
+    setRegenerando(pedidoId)
+    try {
+      // Buscar dados do pedido
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("*, clientes(nome)")
+        .eq("id", pedidoId)
+        .single()
+
+      if (!pedido) {
+        alert("Pedido não encontrado")
+        setRegenerando(null)
+        return
+      }
+
+      // Buscar itens do pedido
+      const { data: itens } = await supabase
+        .from("itens_pedido")
+        .select("*, produtos(nome, tipo)")
+        .eq("pedido_id", pedidoId)
+
+      // Montar linhas do PDF
+      const linhasPDF = (itens || []).map((item: any) => ({
+        descricao: `${item.produtos?.nome || "Item"}${item.produtos?.tipo === "servico" ? " (Serviço)" : ""}`,
+        quantidade: item.quantidade,
+        unitario: Number(item.preco_unitario) || 0,
+        total: Number(item.subtotal) || 0,
+      }))
+
+      const detalhesAdicionais: Array<[string, string]> = [
+        ["Status", pedido.status || "Pendente"]
+      ]
+
+      // Gerar o PDF
+      saveQuotePdf(
+        {
+          titulo: "Orçamento",
+          numero: pedido.numero_unico,
+          cliente: pedido.clientes?.nome || "Cliente não identificado",
+          config,
+          linhas: linhasPDF,
+          total: pedido.total || 0,
+          detalhes: detalhesAdicionais,
+        },
+        `orcamento_${pedido.numero_unico || pedido.id}.pdf`,
+      )
+    } catch (error) {
+      console.error("Erro ao regenerar PDF:", error)
+      alert("Erro ao regenerar PDF")
+    } finally {
+      setRegenerando(null)
+    }
   }
 
   async function atualizarStatus(id: string, status: string, tipo: "pdv" | "frete") {
@@ -47,7 +115,6 @@ export default function OrcamentosPage() {
       if (!error) {
         const pedido = pedidos.find(p => p.id === id)
         if (status === "aceito") {
-          // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
           await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: pedido.total,
@@ -62,12 +129,10 @@ export default function OrcamentosPage() {
         carregarPedidos()
       }
     } else {
-      // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
       const { error } = await supabase.from("fretes_orcamento").update({ status }).eq("id", id)
       if (!error) {
         const frete = fretes.find(f => f.id === id)
         if (status === "aceito") {
-          // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
           await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: frete.total_frete,
@@ -90,7 +155,6 @@ export default function OrcamentosPage() {
         await supabase.from("pedidos").delete().eq("id", id)
         carregarPedidos()
       } else {
-        // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
         await supabase.from("fretes_orcamento").delete().eq("id", id)
         carregarFretes()
       }
@@ -129,36 +193,45 @@ export default function OrcamentosPage() {
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a2a4f] text-white">
-              <tr><th className="p-3">Nº</th><th className="p-3">Cliente</th><th className="p-3">Data</th><th className="p-3 text-right">Total</th><th className="p-3">Status</th><th className="p-3">Ações</th><th className="p-3">Detalhes</th></tr>
+              <tr>
+                <th className="p-3">Nº</th>
+                <th className="p-3">Cliente</th>
+                <th className="p-3">Data</th>
+                <th className="p-3 text-right">Total</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Ações</th>
+                <th className="p-3">PDF</th>
+              </tr>
             </thead>
             <tbody>
               {pedidos.map(p => (
                 <tr key={p.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-mono">{p.numero_unico}</td>
+                  <td className="p-3 font-mono">{p.numero_unico || "-"}</td>
                   <td className="p-3">{p.clientes?.nome}</td>
                   <td className="p-3">{new Date(p.data).toLocaleDateString()}</td>
                   <td className="p-3 text-right font-semibold">{formatCurrency(p.total)}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(p.status)}`}>{getStatusText(p.status)}</span></td>
                   <td className="p-3">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-1">
                       {p.status === "pendente" && (
                         <>
-                          <button onClick={() => atualizarStatus(p.id, "aceito", "pdv")} className="px-2 py-1 bg-green-500 text-white rounded text-sm">✅ Aceitar</button>
-                          <button onClick={() => atualizarStatus(p.id, "recusado", "pdv")} className="px-2 py-1 bg-red-500 text-white rounded text-sm">❌ Recusar</button>
+                          <button onClick={() => atualizarStatus(p.id, "aceito", "pdv")} className="px-2 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">✅</button>
+                          <button onClick={() => atualizarStatus(p.id, "recusado", "pdv")} className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">❌</button>
                         </>
                       )}
-                      <button onClick={() => excluirOrcamento(p.id, "pdv")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm">🗑️ Excluir</button>
+                      <button onClick={() => excluirOrcamento(p.id, "pdv")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600">🗑️</button>
                     </div>
-                   </td>
+                  </td>
                   <td className="p-3">
-                    <button 
-                      onClick={() => verDetalhes(p.id, "pdv")}
-                      className="px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    <button
+                      onClick={() => regenerarPDF(p.id)}
+                      disabled={regenerando === p.id}
+                      className="px-3 py-1 bg-[#c9a03d] text-white rounded text-sm hover:bg-[#b58d2c] disabled:opacity-50 flex items-center gap-1"
                     >
-                      👁️ Ver detalhes
+                      {regenerando === p.id ? "⏳" : "📄"} PDF
                     </button>
-                   </td>
-                 </tr>
+                  </td>
+                </tr>
               ))}
               {pedidos.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-500">Nenhum orçamento encontrado</td></tr>}
             </tbody>
@@ -170,7 +243,16 @@ export default function OrcamentosPage() {
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a2a4f] text-white">
-              <tr><th className="p-3">Cliente</th><th className="p-3">Origem</th><th className="p-3">Destino</th><th className="p-3 text-right">Total</th><th className="p-3">Data</th><th className="p-3">Status</th><th className="p-3">Ações</th><th className="p-3">Detalhes</th></tr>
+              <tr>
+                <th className="p-3">Cliente</th>
+                <th className="p-3">Origem</th>
+                <th className="p-3">Destino</th>
+                <th className="p-3 text-right">Total</th>
+                <th className="p-3">Data</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Ações</th>
+                <th className="p-3">PDF</th>
+              </tr>
             </thead>
             <tbody>
               {fretes.map(f => (
@@ -182,25 +264,25 @@ export default function OrcamentosPage() {
                   <td className="p-3">{new Date(f.created_at).toLocaleDateString()}</td>
                   <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(f.status || "pendente")}`}>{getStatusText(f.status || "pendente")}</span></td>
                   <td className="p-3">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-1">
                       {(f.status || "pendente") === "pendente" && (
                         <>
-                          <button onClick={() => atualizarStatus(f.id, "aceito", "frete")} className="px-2 py-1 bg-green-500 text-white rounded text-sm">✅ Aceitar</button>
-                          <button onClick={() => atualizarStatus(f.id, "recusado", "frete")} className="px-2 py-1 bg-red-500 text-white rounded text-sm">❌ Recusar</button>
+                          <button onClick={() => atualizarStatus(f.id, "aceito", "frete")} className="px-2 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">✅</button>
+                          <button onClick={() => atualizarStatus(f.id, "recusado", "frete")} className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">❌</button>
                         </>
                       )}
-                      <button onClick={() => excluirOrcamento(f.id, "frete")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm">🗑️ Excluir</button>
+                      <button onClick={() => excluirOrcamento(f.id, "frete")} className="px-2 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600">🗑️</button>
                     </div>
-                    </td>
+                  </td>
                   <td className="p-3">
-                    <button 
-                      onClick={() => verDetalhes(f.id, "frete")}
-                      className="px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    <button
+                      disabled
+                      className="px-3 py-1 bg-gray-300 text-gray-500 rounded text-sm cursor-not-allowed"
                     >
-                      👁️ Ver detalhes
+                      📄 PDF
                     </button>
-                   </td>
-                 </tr>
+                  </td>
+                </tr>
               ))}
               {fretes.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-gray-500">Nenhum frete encontrado</td></tr>}
             </tbody>

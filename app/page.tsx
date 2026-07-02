@@ -198,6 +198,7 @@ export default function PDV() {
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error("Sessão expirada.")
 
+      // 🔧 CORRIGIDO: user_id existe, então podemos enviar
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
         .insert({
@@ -279,6 +280,7 @@ export default function PDV() {
       setServicosSelecionados(resetSelecionados)
       setSucesso("Orçamento salvo e PDF gerado com sucesso!")
     } catch (error) {
+      console.error("Erro ao gerar orçamento:", error)
       setErro(error instanceof Error ? error.message : "Erro ao gerar orçamento.")
     } finally {
       setLoading(false)
