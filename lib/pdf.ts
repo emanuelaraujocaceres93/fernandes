@@ -53,40 +53,33 @@ async function carregarImagemBase64(url: string): Promise<string | null> {
 function addHeader(doc: jsPDF, config?: EmpresaConfig | null, logoBase64?: string | null) {
   // Fundo principal
   doc.setFillColor(primary)
-  doc.rect(0, 0, 210, 45, "F")
+  doc.rect(0, 0, 210, 55, "F")
   
-  // Logo (se houver)
+  // Logo - centralizada e maior
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 14, 5, 32, 35)
+      const logoWidth = 50
+      const logoHeight = 50
+      const logoX = (210 - logoWidth) / 2
+      doc.addImage(logoBase64, 'PNG', logoX, 3, logoWidth, logoHeight)
     } catch (e) {
       console.error("Erro ao adicionar logo:", e)
     }
   }
   
-  // Nome da empresa
+  // Nome da empresa - centralizado, abaixo do logo
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(16)
-  const nomeX = logoBase64 ? 54 : 14
-  doc.text(config?.nome_empresa || "Fernandes Sistemas", nomeX, 20)
-  
-  // Telefone
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
-  doc.setTextColor("#c9a03d")
-  doc.text(config?.telefone || "Sistema de gestão comercial", nomeX, 30)
-
-  // Título "ORÇAMENTO"
-  doc.setTextColor(accent)
-  doc.setFont("helvetica", "bold")
   doc.setFontSize(18)
-  doc.text("ORÇAMENTO", 196, 22, { align: "right" })
+  const nomeY = logoBase64 ? 56 : 20
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", 105, nomeY, { align: "center" })
   
-  // Linha decorativa
-  doc.setDrawColor(accent)
-  doc.setLineWidth(0.8)
-  doc.line(14, 40, 196, 40)
+  // Telefone - centralizado, abaixo do nome
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(10)
+  doc.setTextColor("#c9a03d")
+  const telefoneY = logoBase64 ? 64 : 30
+  doc.text(config?.telefone || "Sistema de gestão comercial", 105, telefoneY, { align: "center" })
 }
 
 function addFooter(doc: jsPDF) {
@@ -115,31 +108,46 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     minute: "2-digit"
   }).format(new Date())
 
+  // HEADER
   addHeader(doc, input.config, logoBase64)
+
+  // Título "ORÇAMENTO" - centralizado, abaixo do header
+  const startY = logoBase64 ? 80 : 68
+  doc.setTextColor(primary)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(20)
+  doc.text("ORÇAMENTO", 105, startY, { align: "center" })
+
+  // Linha decorativa abaixo do título
+  doc.setDrawColor(accent)
+  doc.setLineWidth(0.5)
+  doc.line(60, startY + 6, 150, startY + 6)
 
   // Informações do documento
   doc.setTextColor(muted)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(9)
-  doc.text(`Emissão: ${issuedAt}`, 14, 55)
+  const infoY = startY + 16
+  doc.text(`Emissão: ${issuedAt}`, 14, infoY)
   if (input.numero) {
-    doc.text(`Número: ${input.numero}`, 196, 55, { align: "right" })
+    doc.text(`Número: ${input.numero}`, 196, infoY, { align: "right" })
   }
 
   // BOX DO CLIENTE
+  const clienteY = infoY + 12
   doc.setDrawColor("#e5e7eb")
   doc.setFillColor(lightBg)
-  doc.roundedRect(14, 65, 182, 28, 3, 3, "FD")
+  doc.roundedRect(14, clienteY, 182, 28, 3, 3, "FD")
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.text("CLIENTE", 20, 75)
+  doc.text("CLIENTE", 20, clienteY + 10)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(11)
   doc.setTextColor("#1a1a1a")
-  doc.text(input.cliente, 20, 86)
+  doc.text(input.cliente, 20, clienteY + 21)
 
-  let yAtual = 105
+  let yAtual = clienteY + 40
 
   // EXTRAIR DADOS DOS DETALHES
   let statusText = "Pendente"
@@ -178,7 +186,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   doc.setTextColor("#1a1a1a")
   doc.text(statusText, 20, yAtual + 17)
   
-  // SERVIÇOS EXTRAS
+  // SERVIÇOS EXTRAS (total)
   if (servicosExtrasTotal > 0) {
     doc.setFillColor("#fef3c7")
     doc.roundedRect(108, yAtual, 88, 22, 3, 3, "FD")
@@ -194,7 +202,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   
   yAtual += 28
 
-  // LISTA DE SERVIÇOS EXTRAS
+  // LISTA DE SERVIÇOS EXTRAS (detalhada)
   if (servicosExtrasLista.length > 0) {
     const altura = 10 + (servicosExtrasLista.length * 5)
     doc.setFillColor("#fffbeb")
@@ -238,10 +246,14 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     yAtual += alturaObs + 6
   }
 
-  // TABELA DE PRODUTOS
-  yAtual += 8
+  // ============================================
+  // TABELA DE PRODUTOS - CABEÇALHO SEMPRE VISÍVEL
+  // ============================================
   
-  // Cabeçalho da tabela
+  // Adicionar um espaço extra antes da tabela
+  yAtual += 10
+
+  // Desenhar o cabeçalho da tabela com fundo escuro
   doc.setFillColor(primary)
   doc.rect(14, yAtual - 8, 182, 12, "F")
   doc.setTextColor("#ffffff")
@@ -252,52 +264,70 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   doc.text("UNITÁRIO", 165, yAtual + 2, { align: "right" })
   doc.text("TOTAL", 192, yAtual + 2, { align: "right" })
 
-  doc.setFont("helvetica", "normal")
-  doc.setTextColor("#1a1a1a")
-  doc.setFontSize(9)
-  
-  let linhaCount = 0
-  for (const line of input.linhas) {
-    if (yAtual > 255) {
-      addFooter(doc)
-      doc.addPage()
-      addHeader(doc, input.config, logoBase64)
-      yAtual = 60
-      // Recriar cabeçalho da tabela
-      doc.setFillColor(primary)
-      doc.rect(14, yAtual - 8, 182, 12, "F")
-      doc.setTextColor("#ffffff")
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(9)
-      doc.text("DESCRIÇÃO", 18, yAtual + 2)
-      doc.text("QTD", 140, yAtual + 2, { align: "right" })
-      doc.text("UNITÁRIO", 165, yAtual + 2, { align: "right" })
-      doc.text("TOTAL", 192, yAtual + 2, { align: "right" })
-      yAtual += 12
-    }
+  // Avançar para a primeira linha da tabela
+  yAtual += 12
 
-    const description = doc.splitTextToSize(line.descricao, 100)
-    const rowHeight = Math.max(11, description.length * 5 + 8)
-    const posicaoCentral = yAtual + (rowHeight / 2)
+  // Verificar se há itens para exibir
+  const itensValidos = input.linhas.filter(line => line.descricao && line.descricao.trim() !== "")
+  
+  if (itensValidos.length === 0) {
+    doc.setFont("helvetica", "italic")
+    doc.setFontSize(9)
+    doc.setTextColor(muted)
+    doc.text("Nenhum item adicionado", 105, yAtual + 5, { align: "center" })
+    yAtual += 15
+  } else {
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor("#1a1a1a")
+    doc.setFontSize(9)
     
-    doc.setDrawColor("#e5e7eb")
-    doc.line(14, yAtual + rowHeight - 1, 196, yAtual + rowHeight - 1)
-    
-    if (linhaCount % 2 === 0) {
-      doc.setFillColor("#fafafa")
-      doc.rect(14, yAtual, 182, rowHeight - 1, "F")
+    let linhaCount = 0
+    for (const line of itensValidos) {
+      // Verificar se precisa de nova página
+      if (yAtual > 255) {
+        addFooter(doc)
+        doc.addPage()
+        addHeader(doc, input.config, logoBase64)
+        yAtual = 60
+        
+        // Recriar o cabeçalho da tabela na nova página
+        doc.setFillColor(primary)
+        doc.rect(14, yAtual - 8, 182, 12, "F")
+        doc.setTextColor("#ffffff")
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(9)
+        doc.text("DESCRIÇÃO", 18, yAtual + 2)
+        doc.text("QTD", 140, yAtual + 2, { align: "right" })
+        doc.text("UNITÁRIO", 165, yAtual + 2, { align: "right" })
+        doc.text("TOTAL", 192, yAtual + 2, { align: "right" })
+        yAtual += 12
+        linhaCount = 0
+      }
+
+      const description = doc.splitTextToSize(line.descricao, 100)
+      const rowHeight = Math.max(11, description.length * 5 + 8)
+      const posicaoCentral = yAtual + (rowHeight / 2)
+      
+      doc.setDrawColor("#e5e7eb")
+      doc.line(14, yAtual + rowHeight - 1, 196, yAtual + rowHeight - 1)
+      
+      // Alternar cores das linhas
+      if (linhaCount % 2 === 0) {
+        doc.setFillColor("#fafafa")
+        doc.rect(14, yAtual, 182, rowHeight - 1, "F")
+      }
+      
+      doc.text(description, 18, posicaoCentral)
+      doc.text(String(line.quantidade), 140, posicaoCentral, { align: "right" })
+      doc.text(money(line.unitario), 165, posicaoCentral, { align: "right" })
+      doc.text(money(line.total), 192, posicaoCentral, { align: "right" })
+      
+      yAtual += rowHeight + 1
+      linhaCount++
     }
-    
-    doc.text(description, 18, posicaoCentral)
-    doc.text(String(line.quantidade), 140, posicaoCentral, { align: "right" })
-    doc.text(money(line.unitario), 165, posicaoCentral, { align: "right" })
-    doc.text(money(line.total), 192, posicaoCentral, { align: "right" })
-    
-    yAtual += rowHeight + 1
-    linhaCount++
   }
 
-  // TOTAL GERAL
+  // TOTAL GERAL - DESTAQUE
   yAtual += 10
   doc.setFillColor(accent)
   doc.roundedRect(118, yAtual, 78, 24, 3, 3, "F")
