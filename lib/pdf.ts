@@ -58,7 +58,7 @@ function addHeader(doc: jsPDF, config?: EmpresaConfig | null, logoBase64?: strin
   // Logo (se houver)
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 14, 5, 30, 35)
+      doc.addImage(logoBase64, 'PNG', 14, 5, 32, 35)
     } catch (e) {
       console.error("Erro ao adicionar logo:", e)
     }
@@ -67,21 +67,21 @@ function addHeader(doc: jsPDF, config?: EmpresaConfig | null, logoBase64?: strin
   // Nome da empresa
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
-  const nomeX = logoBase64 ? 52 : 14
+  doc.setFontSize(16)
+  const nomeX = logoBase64 ? 54 : 14
   doc.text(config?.nome_empresa || "Fernandes Sistemas", nomeX, 20)
   
-  // Telefone - abaixo do nome
+  // Telefone
   doc.setFont("helvetica", "normal")
   doc.setFontSize(9)
   doc.setTextColor("#c9a03d")
   doc.text(config?.telefone || "Sistema de gestão comercial", nomeX, 30)
 
-  // Título do documento (alinhado à direita)
+  // Título "ORÇAMENTO"
   doc.setTextColor(accent)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(14)
-  doc.text("ORÇAMENTO", 196, 20, { align: "right" })
+  doc.setFontSize(18)
+  doc.text("ORÇAMENTO", 196, 22, { align: "right" })
   
   // Linha decorativa
   doc.setDrawColor(accent)
@@ -178,7 +178,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   doc.setTextColor("#1a1a1a")
   doc.text(statusText, 20, yAtual + 17)
   
-  // SERVIÇOS EXTRAS (total)
+  // SERVIÇOS EXTRAS
   if (servicosExtrasTotal > 0) {
     doc.setFillColor("#fef3c7")
     doc.roundedRect(108, yAtual, 88, 22, 3, 3, "FD")
@@ -194,7 +194,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   
   yAtual += 28
 
-  // LISTA DE SERVIÇOS EXTRAS (detalhada)
+  // LISTA DE SERVIÇOS EXTRAS
   if (servicosExtrasLista.length > 0) {
     const altura = 10 + (servicosExtrasLista.length * 5)
     doc.setFillColor("#fffbeb")
