@@ -5,6 +5,8 @@ import { supabase } from "../../lib/supabaseClient"
 import { formatCurrency } from "../../lib/format"
 import { useRouter } from "next/navigation"
 import { saveQuotePdf } from "../../lib/pdf"
+import html2canvas from "html2canvas"
+import jsPDF from "jspdf"
 
 export default function OrcamentosPage() {
   const router = useRouter()
@@ -53,6 +55,9 @@ export default function OrcamentosPage() {
     if (data) setFretes(data)
   }
 
+  // ============================================
+  // REGENERAR PDF - PDV
+  // ============================================
   async function regenerarPDF(pedidoId: string) {
     setRegenerando(pedidoId)
     try {
@@ -104,14 +109,124 @@ export default function OrcamentosPage() {
     }
   }
 
-  // 🔧 FUNÇÃO CORRIGIDA COMPLETAMENTE
+  // ============================================
+  // REGENERAR PDF - FRETE
+  // ============================================
+  async function regenerarPDFFrete(freteId: string) {
+    setRegenerando(freteId)
+    try {
+      const { data: frete } = await supabase
+        .from("fretes_orcamento")
+        .select("*")
+        .eq("id", freteId)
+        .single()
+
+      if (!frete) {
+        alert("Frete não encontrado")
+        setRegenerando(null)
+        return
+      }
+
+      const { data: configData } = await supabase
+        .from("configuracoes_empresa")
+        .select("*")
+        .limit(1)
+        .single()
+      const configAtual = configData || config
+
+      // Gerar HTML para o PDF do frete
+      const element = document.createElement("div")
+      element.style.width = "800px"
+      element.style.margin = "0 auto"
+      element.style.background = "white"
+      element.style.fontFamily = "'Helvetica', Arial, sans-serif"
+      element.style.padding = "20px"
+      
+      element.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
+          ${configAtual?.logo_url ? `<img src="${configAtual.logo_url}" style="max-width: 200px; margin: 0 auto 20px auto; display: block;" />` : ""}
+          <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px;">${configAtual?.nome_empresa || "Fernandes Sistemas"}</h1>
+          ${configAtual?.telefone ? `<p style="color: #c9a03d; margin: 10px 0 0; font-size: 18px;">📞 ${configAtual.telefone}</p>` : ""}
+        </div>
+        
+        <div style="text-align: center; padding: 30px; border-bottom: 3px solid #c9a03d;">
+          <h2 style="color: #1a2a4f; font-size: 28px; margin: 0; letter-spacing: 3px;">ORÇAMENTO DE FRETE</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 10px 0 0;">Emitido em: ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div style="padding: 30px 40px;">
+          <div style="background: #f8fafc; padding: 25px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #e5e7eb;">
+            <table style="width: 100%; font-size: 16px; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f; width: 120px;">📌 Cliente:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${frete.cliente}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📍 Origem:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${frete.origem || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📍 Destino:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${frete.destino || "—"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1a2a4f;">📏 Distância:</td>
+                <td style="padding: 8px 0; color: #1a1a1a;">${frete.distancia_km?.toFixed(1) || "—"} km</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 35px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
+            <h3 style="color: #1a2a4f; margin: 0 0 15px 0; font-size: 20px; letter-spacing: 2px;">💰 TOTAL DO FRETE</h3>
+            <p style="font-size: 48px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">R$ ${frete.total_frete?.toFixed(2) || "0,00"}</p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 20px;">
+          <p style="margin: 0; font-size: 13px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
+          <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">${configAtual?.nome_empresa || "Fernandes Sistemas"} - Orçamento de Frete</p>
+        </div>
+      `
+
+      document.body.appendChild(element)
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const canvas = await html2canvas(element, { 
+        scale: 3,
+        backgroundColor: "#ffffff", 
+        useCORS: true,
+        width: 800,
+        height: element.scrollHeight,
+        windowWidth: 800
+      })
+
+      const pdf = new jsPDF("p", "mm", "a4")
+      const imgWidth = 190
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const xPos = (210 - imgWidth) / 2
+      const yPos = 10
+
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
+      pdf.save(`orcamento_frete_${Date.now()}.pdf`)
+      document.body.removeChild(element)
+
+    } catch (error) {
+      console.error("Erro ao regenerar PDF do frete:", error)
+      alert("Erro ao regenerar PDF do frete")
+    } finally {
+      setRegenerando(null)
+    }
+  }
+
+  // ============================================
+  // ATUALIZAR STATUS
+  // ============================================
   async function atualizarStatus(id: string, status: string, tipo: "pdv" | "frete") {
     if (tipo === "pdv") {
       const { error } = await supabase.from("pedidos").update({ status }).eq("id", id)
       if (!error) {
         const pedido = pedidos.find(p => p.id === id)
         if (pedido && status === "aceito") {
-          // 🔧 CORRIGIDO: com data e sem user_id (campo não existe)
           const { error: caixaError } = await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: pedido.total,
@@ -137,7 +252,6 @@ export default function OrcamentosPage() {
       if (!error) {
         const frete = fretes.find(f => f.id === id)
         if (frete && status === "aceito") {
-          // 🔧 CORRIGIDO: com data e sem user_id
           const { error: caixaError } = await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: frete.total_frete,
@@ -160,6 +274,9 @@ export default function OrcamentosPage() {
     }
   }
 
+  // ============================================
+  // EXCLUIR ORÇAMENTO
+  // ============================================
   async function excluirOrcamento(id: string, tipo: "pdv" | "frete") {
     if (!confirm("Tem certeza que deseja excluir este orçamento?")) return
 
@@ -180,6 +297,9 @@ export default function OrcamentosPage() {
     }
   }
 
+  // ============================================
+  // STATUS - CORES E TEXTOS
+  // ============================================
   const getStatusColor = (status: string) => {
     switch(status) {
       case "pendente": return "bg-yellow-100 text-yellow-800"
@@ -198,6 +318,9 @@ export default function OrcamentosPage() {
     }
   }
 
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div>
       <h1 className="text-2xl font-bold text-[#1a2a4f] mb-6">📋 Orçamentos</h1>
@@ -217,6 +340,9 @@ export default function OrcamentosPage() {
         </button>
       </div>
 
+      {/* ========================================== */}
+      {/* TABELA PDV */}
+      {/* ========================================== */}
       {aba === "pdv" && (
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
@@ -296,6 +422,9 @@ export default function OrcamentosPage() {
         </div>
       )}
 
+      {/* ========================================== */}
+      {/* TABELA FRETES */}
+      {/* ========================================== */}
       {aba === "frete" && (
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
@@ -323,10 +452,10 @@ export default function OrcamentosPage() {
                   <tr key={f.id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{f.cliente}</td>
                     <td className="p-3 truncate max-w-[120px]" title={f.origem}>
-                      {f.origem?.substring(0, 30)}...
+                      {f.origem?.substring(0, 30) || "—"}
                     </td>
                     <td className="p-3 truncate max-w-[120px]" title={f.destino}>
-                      {f.destino?.substring(0, 30)}...
+                      {f.destino?.substring(0, 30) || "—"}
                     </td>
                     <td className="p-3 text-right font-semibold">{formatCurrency(f.total_frete)}</td>
                     <td className="p-3">{new Date(f.created_at).toLocaleDateString()}</td>
@@ -366,10 +495,11 @@ export default function OrcamentosPage() {
                     </td>
                     <td className="p-3">
                       <button
-                        disabled
-                        className="px-3 py-1 bg-gray-300 text-gray-500 rounded text-sm cursor-not-allowed"
+                        onClick={() => regenerarPDFFrete(f.id)}
+                        disabled={regenerando === f.id}
+                        className="px-3 py-1 bg-[#c9a03d] text-white rounded text-sm hover:bg-[#b58d2c] disabled:opacity-50 flex items-center gap-1"
                       >
-                        📄 PDF
+                        {regenerando === f.id ? "⏳" : "📄"} PDF
                       </button>
                     </td>
                   </tr>
