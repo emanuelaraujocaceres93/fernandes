@@ -18,35 +18,10 @@ type QuotePdfInput = {
   detalhes?: Array<[string, string]>
 }
 
-const primary = "#17264a"
-const accent = "#c69b32"
+const primary = "#1a2a4f"
+const accent = "#c9a03d"
 const muted = "#64748b"
-
-function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null) {
-  doc.setFillColor(primary)
-  doc.rect(0, 0, 210, 35, "F")
-  doc.setTextColor("#ffffff")
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
-  doc.text(config?.nome_empresa || "Fernandes Sistemas", 14, 17)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
-  doc.text(config?.telefone || "Sistema de gestao comercial", 14, 25)
-
-  doc.setTextColor(accent)
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(13)
-  doc.text(title.toUpperCase(), 196, 18, { align: "right" })
-}
-
-function addFooter(doc: jsPDF) {
-  doc.setFillColor(primary)
-  doc.rect(0, 282, 210, 15, "F")
-  doc.setTextColor("#ffffff")
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
-  doc.text("Este orcamento e valido por 30 dias.", 105, 291, { align: "center" })
-}
+const lightBg = "#f8fafc"
 
 function money(value: number): string {
   let valorSeguro = value;
@@ -59,38 +34,106 @@ function money(value: number): string {
   }).format(valorSeguro)
 }
 
+function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null) {
+  // Fundo principal
+  doc.setFillColor(primary)
+  doc.rect(0, 0, 210, 50, "F")
+  
+  // Logo (se houver)
+  if (config?.logo_url) {
+    try {
+      // Tenta adicionar a logo - será processada no front-end
+      // Por enquanto, deixamos espaço para a logo
+      doc.setFillColor("#ffffff")
+      doc.rect(14, 8, 35, 35, "F")
+      doc.setFillColor("#e5e7eb")
+      doc.rect(14, 8, 35, 35, "F")
+      doc.setTextColor("#64748b")
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7)
+      doc.text("Logo", 31, 28, { align: "center" })
+    } catch (e) {
+      // Ignora erro de logo
+    }
+  }
+  
+  // Nome da empresa
+  doc.setTextColor("#ffffff")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(22)
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", config?.logo_url ? 56 : 14, 25)
+  
+  // Telefone
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(10)
+  doc.setTextColor("#c9a03d")
+  doc.text(config?.telefone || "Sistema de gestão comercial", config?.logo_url ? 56 : 14, 35)
+
+  // Título do documento (alinhado à direita)
+  doc.setTextColor(accent)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(16)
+  doc.text(title.toUpperCase(), 196, 25, { align: "right" })
+  
+  // Linha decorativa dourada
+  doc.setDrawColor(accent)
+  doc.setLineWidth(1)
+  doc.line(14, 45, 196, 45)
+}
+
+function addFooter(doc: jsPDF) {
+  doc.setFillColor(primary)
+  doc.rect(0, 282, 210, 18, "F")
+  doc.setTextColor("#ffffff")
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.text("Este orçamento é válido por 30 dias.", 105, 291, { align: "center" })
+  doc.text(`Gerado em: ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}`, 105, 297, { align: "center" })
+}
+
 export function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const doc = new jsPDF("p", "mm", "a4")
-  const issuedAt = new Intl.DateTimeFormat("pt-BR").format(new Date())
+  const issuedAt = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date())
 
   addHeader(doc, input.titulo, input.config)
 
+  // Título
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(20)
-  doc.text(input.titulo, 14, 52)
+  doc.setFontSize(24)
+  doc.text(input.titulo, 14, 68)
 
+  // Data e número
   doc.setFontSize(10)
   doc.setFont("helvetica", "normal")
   doc.setTextColor(muted)
-  doc.text(`Emissao: ${issuedAt}`, 14, 60)
-  if (input.numero) doc.text(`Numero: ${input.numero}`, 196, 60, { align: "right" })
+  doc.text(`Emissão: ${issuedAt}`, 14, 78)
+  if (input.numero) {
+    doc.text(`Número: ${input.numero}`, 196, 78, { align: "right" })
+  }
 
-  // BOX DO CLIENTE - CORRIGIDO
+  // BOX DO CLIENTE
   doc.setDrawColor("#e5e7eb")
-  doc.setFillColor("#f8fafc")
-  doc.roundedRect(14, 70, 182, 22, 2, 2, "FD")
+  doc.setFillColor(lightBg)
+  doc.roundedRect(14, 88, 182, 30, 3, 3, "FD")
   doc.setTextColor(primary)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.text("Cliente", 20, 79)
+  doc.text("CLIENTE", 20, 98)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.text(input.cliente, 20, 87) 
+  doc.setFontSize(12)
+  doc.setTextColor("#1a1a1a")
+  doc.text(input.cliente, 20, 110)
 
-  let yAtual = 105
+  let yAtual = 130
 
-  // EXTRAIR DADOS CORRETAMENTE
+  // EXTRAIR DADOS DOS DETALHES
   let statusText = "Pendente"
   let observacoesText = ""
   let servicosExtrasTotal = 0
@@ -102,127 +145,163 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
     } else if (label === "Observações") {
       observacoesText = value
     } else if (label === "Serviços Extras") {
-      servicosExtrasTotal = parseFloat(value.replace("R$", "").replace(".", "").replace(",", ".")) || 0
+      servicosExtrasTotal = parseFloat(value.replace("R$", "").replace(/\./g, "").replace(",", ".")) || 0
     } else if (label.startsWith("  •")) {
       servicosExtrasLista.push(label.replace("  •", "").trim())
     }
   }
 
-  // STATUS
-  doc.setFillColor("#f0fdf4")
-  doc.roundedRect(14, yAtual, 88, 18, 2, 2, "FD")
+  // STATUS - com cor dinâmica
+  const statusColors: Record<string, string> = {
+    "pendente": "#fef3c7",
+    "aceito": "#dcfce7",
+    "recusado": "#fee2e2"
+  }
+  const statusColor = statusColors[statusText.toLowerCase()] || "#f3f4f6"
+  
+  doc.setFillColor(statusColor)
+  doc.roundedRect(14, yAtual, 88, 22, 3, 3, "FD")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
   doc.setTextColor(primary)
-  doc.text("Status", 20, yAtual + 6)
+  doc.text("STATUS", 20, yAtual + 7)
   doc.setFont("helvetica", "normal")
-  doc.text(statusText, 20, yAtual + 13)
+  doc.setFontSize(10)
+  doc.setTextColor("#1a1a1a")
+  doc.text(statusText, 20, yAtual + 17)
   
-  // SERVIÇOS EXTRAS (apenas o total)
+  // SERVIÇOS EXTRAS (total)
   if (servicosExtrasTotal > 0) {
-    doc.setFillColor("#fff7e0")
-    doc.roundedRect(108, yAtual, 88, 18, 2, 2, "FD")
+    doc.setFillColor("#fef3c7")
+    doc.roundedRect(108, yAtual, 88, 22, 3, 3, "FD")
     doc.setFont("helvetica", "bold")
-    doc.text("Servicos Extras", 114, yAtual + 6)
+    doc.setFontSize(9)
+    doc.setTextColor(primary)
+    doc.text("SERVIÇOS EXTRAS", 114, yAtual + 7)
     doc.setFont("helvetica", "normal")
-    doc.text(money(servicosExtrasTotal), 114, yAtual + 13)
+    doc.setFontSize(11)
+    doc.setTextColor(accent)
+    doc.text(money(servicosExtrasTotal), 114, yAtual + 17)
   }
   
-  yAtual += 24
+  yAtual += 28
 
   // LISTA DE SERVIÇOS EXTRAS (detalhada)
   if (servicosExtrasLista.length > 0) {
-    doc.setFillColor("#fef3c7")
-    doc.roundedRect(14, yAtual, 182, 10 + (servicosExtrasLista.length * 5), 2, 2, "FD")
+    const altura = 12 + (servicosExtrasLista.length * 5.5)
+    doc.setFillColor("#fffbeb")
+    doc.roundedRect(14, yAtual, 182, altura, 3, 3, "FD")
     
     doc.setFont("helvetica", "bold")
     doc.setFontSize(9)
     doc.setTextColor(primary)
-    doc.text("Servicos contratados:", 20, yAtual + 6)
+    doc.text("SERVIÇOS CONTRATADOS:", 20, yAtual + 7)
     
     doc.setFont("helvetica", "normal")
     doc.setFontSize(8)
-    let yServico = yAtual + 12
+    doc.setTextColor("#4a4a4a")
+    let yServico = yAtual + 14
     for (const servico of servicosExtrasLista) {
       doc.text(`• ${servico}`, 20, yServico)
-      yServico += 5
+      yServico += 5.5
     }
     
-    yAtual += 15 + (servicosExtrasLista.length * 5)
+    yAtual += altura + 6
   }
 
   // OBSERVAÇÕES
   if (observacoesText && observacoesText.trim() !== "") {
     const linhasObs = doc.splitTextToSize(observacoesText, 170)
-    const alturaObs = Math.max(18, linhasObs.length * 5 + 8)
+    const alturaObs = Math.max(20, linhasObs.length * 5 + 12)
     
-    doc.setFillColor("#e0f2fe")
-    doc.roundedRect(14, yAtual, 182, alturaObs, 2, 2, "FD")
+    doc.setFillColor("#eff6ff")
+    doc.roundedRect(14, yAtual, 182, alturaObs, 3, 3, "FD")
     
     doc.setFont("helvetica", "bold")
     doc.setFontSize(9)
     doc.setTextColor(primary)
-    doc.text("Observacoes", 20, yAtual + 6)
+    doc.text("OBSERVAÇÕES", 20, yAtual + 7)
     
     doc.setFont("helvetica", "normal")
     doc.setFontSize(9)
     doc.setTextColor("#333333")
-    doc.text(linhasObs, 20, yAtual + 13)
+    doc.text(linhasObs, 20, yAtual + 16)
     
-    yAtual += alturaObs + 5
+    yAtual += alturaObs + 6
   }
 
   // TABELA DE PRODUTOS
-  yAtual += 5
+  yAtual += 8
   
   // Cabeçalho da tabela
   doc.setFillColor(primary)
-  doc.rect(14, yAtual - 10, 182, 12, "F")
+  doc.rect(14, yAtual - 8, 182, 12, "F")
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.text("Descricao", 18, yAtual - 3)
-  doc.text("Qtd", 140, yAtual - 3, { align: "right" })
-  doc.text("Unitario", 165, yAtual - 3, { align: "right" })
-  doc.text("Total", 192, yAtual - 3, { align: "right" })
+  doc.text("DESCRIÇÃO", 18, yAtual + 2)
+  doc.text("QTD", 140, yAtual + 2, { align: "right" })
+  doc.text("UNITÁRIO", 165, yAtual + 2, { align: "right" })
+  doc.text("TOTAL", 192, yAtual + 2, { align: "right" })
 
   doc.setFont("helvetica", "normal")
-  doc.setTextColor("#111827")
+  doc.setTextColor("#1a1a1a")
   doc.setFontSize(9)
   
+  let linhaCount = 0
   for (const line of input.linhas) {
-    if (yAtual > 260) {
+    // Verificar se precisa de nova página
+    if (yAtual > 255) {
       addFooter(doc)
       doc.addPage()
       addHeader(doc, input.titulo, input.config)
       yAtual = 60
+      // Recriar cabeçalho da tabela na nova página
+      doc.setFillColor(primary)
+      doc.rect(14, yAtual - 8, 182, 12, "F")
+      doc.setTextColor("#ffffff")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9)
+      doc.text("DESCRIÇÃO", 18, yAtual + 2)
+      doc.text("QTD", 140, yAtual + 2, { align: "right" })
+      doc.text("UNITÁRIO", 165, yAtual + 2, { align: "right" })
+      doc.text("TOTAL", 192, yAtual + 2, { align: "right" })
+      yAtual += 12
     }
 
     const description = doc.splitTextToSize(line.descricao, 100)
-    const rowHeight = Math.max(12, description.length * 5 + 10)
+    const rowHeight = Math.max(11, description.length * 5 + 8)
     const posicaoCentral = yAtual + (rowHeight / 2)
     
+    // Linha de separação
     doc.setDrawColor("#e5e7eb")
-    doc.line(14, yAtual + rowHeight - 2, 196, yAtual + rowHeight - 2)
+    doc.line(14, yAtual + rowHeight - 1, 196, yAtual + rowHeight - 1)
+    
+    // Alternar cores das linhas
+    if (linhaCount % 2 === 0) {
+      doc.setFillColor("#fafafa")
+      doc.rect(14, yAtual, 182, rowHeight - 1, "F")
+    }
+    
     doc.text(description, 18, posicaoCentral)
     doc.text(String(line.quantidade), 140, posicaoCentral, { align: "right" })
     doc.text(money(line.unitario), 165, posicaoCentral, { align: "right" })
     doc.text(money(line.total), 192, posicaoCentral, { align: "right" })
     
-    yAtual += rowHeight + 2
+    yAtual += rowHeight + 1
+    linhaCount++
   }
 
-  // TOTAL GERAL
-  yAtual += 8
-  doc.setFillColor("#fff7e0")
-  doc.roundedRect(118, yAtual, 78, 18, 2, 2, "F")
-  doc.setTextColor(primary)
+  // TOTAL GERAL - DESTAQUE
+  yAtual += 10
+  doc.setFillColor(accent)
+  doc.roundedRect(118, yAtual, 78, 24, 3, 3, "F")
+  doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(10)
-  doc.text("Total geral", 124, yAtual + 12)
-  doc.setTextColor(accent)
+  doc.text("TOTAL GERAL", 124, yAtual + 9)
   doc.setFontSize(16)
-  doc.text(money(input.total), 192, yAtual + 12, { align: "right" })
+  doc.text(money(input.total), 192, yAtual + 17, { align: "right" })
 
   addFooter(doc)
   doc.save(filename)
@@ -252,66 +331,10 @@ export function cartToPdfLines(items: ItemCarrinho[]) {
     const quantidade = Number(item.quantidade) || 1;
     
     return {
-      descricao: `${item.nome}${item.tipo === "servico" ? " (Servico)" : ""}`,
+      descricao: `${item.nome}${item.tipo === "servico" ? " (Serviço)" : ""}`,
       quantidade: quantidade,
       unitario: valorUnitario,
       total: valorUnitario * quantidade,
     };
   });
 }
-
-export function formatCurrency(value: number | string | null | undefined): string {
-  if (value === null || value === undefined || value === '') {
-    return 'R$ 0,00';
-  }
-  
-  let numero: number;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/R\$/g, '').replace(/\./g, '').replace(/,/g, '.').trim();
-    numero = parseFloat(cleaned);
-  } else {
-    numero = Number(value);
-  }
-  
-  if (isNaN(numero) || !isFinite(numero)) {
-    return 'R$ 0,00';
-  }
-  
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(numero);
-}
-
-export function formatDate(date: string | Date | null | undefined): string {
-  if (!date) return '-';
-  
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return '-';
-    
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(d);
-  } catch {
-    return '-';
-  }
-}
-
-export function normalizeText(text: string): string {
-  return text?.trim() || '';
-}
-
-export function toPositiveNumber(value: string | number): number {
-  const num = typeof value === 'string' 
-    ? parseFloat(value.replace(/\./g, '').replace(',', '.'))
-    : Number(value);
-  
-  if (isNaN(num) || !isFinite(num)) return 0;
-  return Math.max(0, num);
-}
-

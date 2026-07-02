@@ -133,7 +133,6 @@ export default function PDV() {
     })
   }
 
-  // 🔧 FUNÇÃO CORRIGIDA - REMOVIDO user_id
   async function criarClienteSeNecessario() {
     const nome = normalizeText(nomeCliente)
     if (!nome) {
@@ -212,7 +211,6 @@ export default function PDV() {
 
       if (pedidoError || !pedido) throw new Error(pedidoError?.message || "Erro ao salvar pedido.")
 
-      // 🔧 CORRIGIDO: preco_unitario e subtotal (NÃO unitario e total)
       const itens = carrinho.map((item) => ({
         pedido_id: pedido.id,
         produto_id: item.id,
@@ -287,7 +285,6 @@ export default function PDV() {
     }
   }
 
-  // Agrupar serviços extras por categoria
   const servicosPorCategoria = useMemo(() => {
     const agrupado: { [key: string]: ServicoExtra[] } = {}
     servicosExtras.forEach(servico => {
