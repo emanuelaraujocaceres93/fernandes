@@ -126,9 +126,8 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     `
   }
 
-  // 🔧 CABEÇALHO IGUAL AO DO FRETE (grande e centralizado)
   element.innerHTML = `
-    <!-- HEADER - IGUAL AO FRETE -->
+    <!-- HEADER -->
     <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
       ${input.config?.logo_url ? `<img src="${input.config.logo_url}" style="max-width: 200px; margin: 0 auto 20px auto; display: block;" />` : ""}
       <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px;">${input.config?.nome_empresa || "Fernandes Sistemas"}</h1>
@@ -218,9 +217,10 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const imgWidth = 190
   const imgHeight = (canvas.height * imgWidth) / canvas.width
   
+  // 🔧 ALTURAS
   const pageHeight = 297
   const marginTop = 8
-  const marginBottom = 18
+  const marginBottom = 30 // Aumentado para garantir que o rodapé não corte conteúdo
   const usableHeight = pageHeight - marginTop - marginBottom
 
   function addFooterToPage(doc: jsPDF) {
@@ -235,27 +235,29 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     doc.text(`${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento`, 105, yPos + 9, { align: "center" })
   }
 
+  // 🔧 VERIFICAR SE CABE EM UMA PÁGINA
   if (imgHeight <= usableHeight) {
+    // ✅ UMA ÚNICA PÁGINA
     const xPos = (210 - imgWidth) / 2
     const yPos = 8
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
     addFooterToPage(pdf)
   } else {
-    let heightLeft = imgHeight
+    // 🔄 MÚLTIPLAS PÁGINAS - COM CORTE LIMPO
+    // Calcular quantas páginas são necessárias
+    const totalPages = Math.ceil(imgHeight / usableHeight)
     let position = 0
-    let isFirstPage = true
-
-    while (heightLeft > 0) {
-      if (!isFirstPage) {
+    
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
         pdf.addPage()
       }
       
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
+      // 🔧 Posicionar a imagem de forma que o conteúdo seja distribuído
+      // A primeira página começa em 0, as próximas continuam de onde parou
+      const yOffset = -i * usableHeight
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, yOffset, imgWidth, imgHeight)
       addFooterToPage(pdf)
-      
-      heightLeft -= usableHeight
-      position -= usableHeight
-      isFirstPage = false
     }
   }
 
