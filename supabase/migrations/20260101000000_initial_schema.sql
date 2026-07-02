@@ -165,4 +165,4 @@ CREATE POLICY "Enable all for authenticated users" ON fretes_orcamento
     FOR ALL USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable all for authenticated users" ON caixa_movimentacoes
-    FOR ALL USING (auth.role() = 'authenticated');
+    FOR ALL USING (auth.role() = 'authenticated');npm install -g supabase
