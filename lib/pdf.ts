@@ -60,6 +60,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   element.style.background = "white"
   element.style.fontFamily = "'Helvetica', Arial, sans-serif"
   element.style.padding = "20px"
+  element.style.boxSizing = "border-box"
   
   // Status color
   const statusColors: Record<string, string> = {
@@ -79,10 +80,10 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       const bgColor = linhaCount % 2 === 0 ? "#fafafa" : "white"
       tabelaHTML += `
         <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
-          <td style="padding: 8px 12px; text-align: left; font-size: 14px; color: #1a1a1a;">${line.descricao}</td>
-          <td style="padding: 8px 12px; text-align: right; font-size: 14px; color: #1a1a1a;">${line.quantidade}</td>
-          <td style="padding: 8px 12px; text-align: right; font-size: 14px; color: #1a1a1a;">${money(line.unitario)}</td>
-          <td style="padding: 8px 12px; text-align: right; font-size: 14px; font-weight: bold; color: #1a1a1a;">${money(line.total)}</td>
+          <td style="padding: 8px 12px; text-align: left; font-size: 13px; color: #1a1a1a; max-width: 300px; word-wrap: break-word;">${line.descricao}</td>
+          <td style="padding: 8px 12px; text-align: center; font-size: 13px; color: #1a1a1a;">${line.quantidade}</td>
+          <td style="padding: 8px 12px; text-align: right; font-size: 13px; color: #1a1a1a;">${money(line.unitario)}</td>
+          <td style="padding: 8px 12px; text-align: right; font-size: 13px; font-weight: bold; color: #1a1a1a;">${money(line.total)}</td>
         </tr>
       `
       linhaCount++
@@ -93,7 +94,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   let servicosHTML = ""
   if (servicosExtrasLista.length > 0) {
     for (const servico of servicosExtrasLista) {
-      servicosHTML += `<li style="margin: 2px 0; font-size: 13px; color: #4a4a4a;">• ${servico}</li>`
+      servicosHTML += `<li style="margin: 2px 0; font-size: 12px; color: #4a4a4a;">• ${servico}</li>`
     }
   }
 
@@ -101,52 +102,52 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   let observacoesHTML = ""
   if (observacoesText && observacoesText.trim() !== "") {
     observacoesHTML = `
-      <div style="background: #eff6ff; padding: 15px 20px; border-radius: 8px; margin-top: 15px;">
-        <p style="font-weight: bold; font-size: 13px; color: #1a2a4f; margin: 0 0 5px 0;">OBSERVAÇÕES</p>
-        <p style="font-size: 13px; color: #333333; margin: 0;">${observacoesText}</p>
+      <div style="background: #eff6ff; padding: 12px 16px; border-radius: 8px; margin-top: 15px;">
+        <p style="font-weight: bold; font-size: 12px; color: #1a2a4f; margin: 0 0 5px 0;">OBSERVAÇÕES</p>
+        <p style="font-size: 12px; color: #333333; margin: 0;">${observacoesText}</p>
       </div>
     `
   }
 
   element.innerHTML = `
     <!-- HEADER -->
-    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
-      ${input.config?.logo_url ? `<img src="${input.config.logo_url}" style="max-width: 150px; margin: 0 auto 15px auto; display: block;" />` : ""}
-      <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: 2px;">${input.config?.nome_empresa || "Fernandes Sistemas"}</h1>
-      ${input.config?.telefone ? `<p style="color: #c9a03d; margin: 8px 0 0 0; font-size: 16px;">📞 ${input.config.telefone}</p>` : ""}
+    <div style="text-align: center; padding: 30px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
+      ${input.config?.logo_url ? `<img src="${input.config.logo_url}" style="max-width: 120px; margin: 0 auto 15px auto; display: block;" />` : ""}
+      <h1 style="color: white; margin: 0; font-size: 24px; letter-spacing: 2px;">${input.config?.nome_empresa || "Fernandes Sistemas"}</h1>
+      ${input.config?.telefone ? `<p style="color: #c9a03d; margin: 8px 0 0 0; font-size: 14px;">📞 ${input.config.telefone}</p>` : ""}
     </div>
     
     <!-- TÍTULO -->
-    <div style="text-align: center; padding: 25px 0; border-bottom: 3px solid #c9a03d;">
-      <h2 style="color: #1a2a4f; font-size: 26px; margin: 0; letter-spacing: 3px;">ORÇAMENTO</h2>
-      <p style="color: #64748b; font-size: 14px; margin: 8px 0 0 0;">Emissão: ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}</p>
-      ${input.numero ? `<p style="color: #64748b; font-size: 14px; margin: 2px 0 0 0;">Número: ${input.numero}</p>` : ""}
+    <div style="text-align: center; padding: 20px 0; border-bottom: 3px solid #c9a03d;">
+      <h2 style="color: #1a2a4f; font-size: 22px; margin: 0; letter-spacing: 3px;">ORÇAMENTO</h2>
+      <p style="color: #64748b; font-size: 12px; margin: 5px 0 0 0;">Emissão: ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}</p>
+      ${input.numero ? `<p style="color: #64748b; font-size: 12px; margin: 2px 0 0 0;">Número: ${input.numero}</p>` : ""}
     </div>
     
     <!-- CLIENTE -->
-    <div style="background: #f8fafc; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
-      <p style="font-weight: bold; font-size: 12px; color: #1a2a4f; margin: 0 0 5px 0;">CLIENTE</p>
-      <p style="font-size: 16px; color: #1a1a1a; margin: 0;">${input.cliente}</p>
+    <div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; margin: 15px 0; border: 1px solid #e5e7eb;">
+      <p style="font-weight: bold; font-size: 11px; color: #1a2a4f; margin: 0 0 5px 0;">CLIENTE</p>
+      <p style="font-size: 15px; color: #1a1a1a; margin: 0;">${input.cliente}</p>
     </div>
     
     <!-- STATUS E SERVIÇOS EXTRAS -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
-      <div style="background: ${statusColor}; padding: 12px 15px; border-radius: 8px;">
-        <p style="font-weight: bold; font-size: 11px; color: #1a2a4f; margin: 0 0 5px 0;">STATUS</p>
-        <p style="font-size: 15px; color: #1a1a1a; margin: 0;">${statusText}</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0;">
+      <div style="background: ${statusColor}; padding: 10px 14px; border-radius: 8px;">
+        <p style="font-weight: bold; font-size: 10px; color: #1a2a4f; margin: 0 0 5px 0;">STATUS</p>
+        <p style="font-size: 14px; color: #1a1a1a; margin: 0;">${statusText}</p>
       </div>
       ${servicosExtrasTotal > 0 ? `
-        <div style="background: #fef3c7; padding: 12px 15px; border-radius: 8px;">
-          <p style="font-weight: bold; font-size: 11px; color: #1a2a4f; margin: 0 0 5px 0;">SERVIÇOS EXTRAS</p>
-          <p style="font-size: 15px; color: #c9a03d; font-weight: bold; margin: 0;">${money(servicosExtrasTotal)}</p>
+        <div style="background: #fef3c7; padding: 10px 14px; border-radius: 8px;">
+          <p style="font-weight: bold; font-size: 10px; color: #1a2a4f; margin: 0 0 5px 0;">SERVIÇOS EXTRAS</p>
+          <p style="font-size: 14px; color: #c9a03d; font-weight: bold; margin: 0;">${money(servicosExtrasTotal)}</p>
         </div>
       ` : ""}
     </div>
     
     <!-- SERVIÇOS CONTRATADOS -->
     ${servicosHTML ? `
-      <div style="background: #fffbeb; padding: 12px 20px; border-radius: 8px; margin: 10px 0;">
-        <p style="font-weight: bold; font-size: 12px; color: #1a2a4f; margin: 0 0 8px 0;">SERVIÇOS CONTRATADOS:</p>
+      <div style="background: #fffbeb; padding: 10px 16px; border-radius: 8px; margin: 10px 0;">
+        <p style="font-weight: bold; font-size: 11px; color: #1a2a4f; margin: 0 0 8px 0;">SERVIÇOS CONTRATADOS:</p>
         <ul style="margin: 0; padding-left: 20px;">${servicosHTML}</ul>
       </div>
     ` : ""}
@@ -156,14 +157,14 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     
     <!-- TABELA DE PRODUTOS -->
     ${itensValidos.length > 0 ? `
-      <div style="margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse;">
+      <div style="margin-top: 15px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead style="background: #1a2a4f; color: white;">
             <tr>
-              <th style="padding: 10px 12px; text-align: left; font-size: 13px; font-weight: bold;">DESCRIÇÃO</th>
-              <th style="padding: 10px 12px; text-align: right; font-size: 13px; font-weight: bold;">QTD</th>
-              <th style="padding: 10px 12px; text-align: right; font-size: 13px; font-weight: bold;">UNITÁRIO</th>
-              <th style="padding: 10px 12px; text-align: right; font-size: 13px; font-weight: bold;">TOTAL</th>
+              <th style="padding: 8px 12px; text-align: left; font-size: 12px; font-weight: bold;">DESCRIÇÃO</th>
+              <th style="padding: 8px 12px; text-align: center; font-size: 12px; font-weight: bold;">QTD</th>
+              <th style="padding: 8px 12px; text-align: right; font-size: 12px; font-weight: bold;">UNITÁRIO</th>
+              <th style="padding: 8px 12px; text-align: right; font-size: 12px; font-weight: bold;">TOTAL</th>
             </tr>
           </thead>
           <tbody>
@@ -174,14 +175,14 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     ` : ""}
     
     <!-- TOTAL GERAL -->
-    <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 20px; border-radius: 10px; margin: 20px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
-      <p style="color: #1a2a4f; font-size: 16px; font-weight: bold; margin: 0 0 5px 0; letter-spacing: 2px;">TOTAL GERAL</p>
-      <p style="font-size: 36px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
+    <div style="background: linear-gradient(135deg, #c9a03d 0%, #b58d2c 100%); text-align: center; padding: 16px 20px; border-radius: 10px; margin: 15px 0; box-shadow: 0 4px 15px rgba(201, 160, 61, 0.3);">
+      <p style="color: #1a2a4f; font-size: 14px; font-weight: bold; margin: 0 0 5px 0; letter-spacing: 2px;">TOTAL GERAL</p>
+      <p style="font-size: 32px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
     </div>
     
     <!-- FOOTER -->
-    <div style="text-align: center; padding: 15px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 10px;">
-      <p style="margin: 0; font-size: 12px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
+    <div style="text-align: center; padding: 12px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 10px;">
+      <p style="margin: 0; font-size: 11px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
       <p style="margin: 5px 0 0 0; font-size: 10px; color: #64748b;">${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento</p>
     </div>
   `
@@ -189,8 +190,11 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   document.body.appendChild(element)
   await new Promise(resolve => setTimeout(resolve, 500))
 
+  // ============================================
+  // CAPTURAR E DIVIDIR EM VÁRIAS PÁGINAS
+  // ============================================
   const canvas = await html2canvas(element, { 
-    scale: 3,
+    scale: 2,
     backgroundColor: "#ffffff", 
     useCORS: true,
     width: 800,
@@ -201,10 +205,31 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const pdf = new jsPDF("p", "mm", "a4")
   const imgWidth = 190
   const imgHeight = (canvas.height * imgWidth) / canvas.width
-  const xPos = (210 - imgWidth) / 2
-  const yPos = 10
+  const pageHeight = 277 // Altura da página A4 em mm (com margem)
+  const imgHeightMM = imgHeight
 
-  pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
+  // Se a imagem for maior que uma página, dividir
+  if (imgHeightMM > pageHeight) {
+    let heightLeft = imgHeightMM
+    let position = 0
+
+    // Primeira página
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    // Páginas adicionais
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeightMM
+      pdf.addPage()
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+  } else {
+    // Se couber em uma página
+    const xPos = (210 - imgWidth) / 2
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, 10, imgWidth, imgHeight)
+  }
+
   pdf.save(filename)
   document.body.removeChild(element)
 }
