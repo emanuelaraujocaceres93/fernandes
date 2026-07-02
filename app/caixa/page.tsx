@@ -17,9 +17,13 @@ export default function CaixaPage() {
   }, [])
 
   async function carregarMovimentacoes() {
-    const { data, error } = await supabase.from("caixa").select("*").order("data", { ascending: false })
+    // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
+    const { data, error } = await supabase
+      .from("caixa_movimentacoes")
+      .select("*")
+      .order("data", { ascending: false })
     if (data) setMovimentacoes(data as CaixaMovimentacao[])
-    if (error) setErro("Nao foi possivel carregar o caixa.")
+    if (error) setErro("Não foi possível carregar o caixa.")
   }
 
   const totais = useMemo(() => {
@@ -38,13 +42,13 @@ export default function CaixaPage() {
     const valor = toPositiveNumber(form.valor)
 
     if (!descricao || !valor) {
-      setErro("Preencha descricao e valor maior que zero.")
+      setErro("Preencha descrição e valor maior que zero.")
       return
     }
 
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) {
-      setErro("Sessao expirada. Entre novamente.")
+      setErro("Sessão expirada. Entre novamente.")
       return
     }
 
@@ -56,9 +60,10 @@ export default function CaixaPage() {
       user_id: userData.user.id,
     }
 
+    // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
     const { error } = editando
-      ? await supabase.from("caixa").update(dados).eq("id", editando.id)
-      : await supabase.from("caixa").insert(dados)
+      ? await supabase.from("caixa_movimentacoes").update(dados).eq("id", editando.id)
+      : await supabase.from("caixa_movimentacoes").insert(dados)
 
     if (error) {
       setErro(error.message)
@@ -73,7 +78,8 @@ export default function CaixaPage() {
 
   async function excluirMovimentacao(id: string) {
     if (!confirm("Tem certeza que deseja excluir?")) return
-    const { error } = await supabase.from("caixa").delete().eq("id", id)
+    // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
+    const { error } = await supabase.from("caixa_movimentacoes").delete().eq("id", id)
     if (error) setErro(error.message)
     carregarMovimentacoes()
   }
@@ -104,7 +110,7 @@ export default function CaixaPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Resumo label="Entradas" value={formatCurrency(totais.entradas)} tone="green" />
-        <Resumo label="Saidas" value={formatCurrency(totais.saidas)} tone="red" />
+        <Resumo label="Saídas" value={formatCurrency(totais.saidas)} tone="red" />
         <Resumo label="Saldo atual" value={formatCurrency(totais.saldo)} tone={totais.saldo >= 0 ? "green" : "red"} />
       </div>
 
@@ -113,9 +119,9 @@ export default function CaixaPage() {
           <thead className="bg-[#17264a] text-white">
             <tr>
               <th className="p-3 text-left text-sm">Data</th>
-              <th className="p-3 text-left text-sm">Descricao</th>
+              <th className="p-3 text-left text-sm">Descrição</th>
               <th className="p-3 text-right text-sm">Valor</th>
-              <th className="p-3 text-left text-sm">Acoes</th>
+              <th className="p-3 text-left text-sm">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -134,7 +140,7 @@ export default function CaixaPage() {
                 </td>
               </tr>
             ))}
-            {movimentacoes.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-sm text-slate-500">Nenhuma movimentacao.</td></tr>}
+            {movimentacoes.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-sm text-slate-500">Nenhuma movimentação.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -143,7 +149,7 @@ export default function CaixaPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <h2 className="mb-4 text-xl font-bold text-[#17264a]">{editando ? "Editar despesa" : "Nova despesa"}</h2>
-            <input type="text" placeholder="Descricao" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
+            <input type="text" placeholder="Descrição" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
             <input type="number" step="0.01" min="0" placeholder="Valor (R$)" className="mb-3 w-full rounded-lg border border-slate-300 p-3" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
             <input type="date" className="mb-4 w-full rounded-lg border border-slate-300 p-3" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
             <div className="flex gap-3">
