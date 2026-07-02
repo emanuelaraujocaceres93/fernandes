@@ -33,8 +33,9 @@ export default function OrcamentosPage() {
   }
 
   async function carregarFretes() {
+    // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
     const { data } = await supabase
-      .from("fretes_orcamentos")
+      .from("fretes_orcamento")
       .select("*")
       .order("created_at", { ascending: false })
     if (data) setFretes(data)
@@ -46,7 +47,8 @@ export default function OrcamentosPage() {
       if (!error) {
         const pedido = pedidos.find(p => p.id === id)
         if (status === "aceito") {
-          await supabase.from("caixa").insert({
+          // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
+          await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: pedido.total,
             descricao: `Venda - ${pedido.numero_unico}`,
@@ -60,11 +62,13 @@ export default function OrcamentosPage() {
         carregarPedidos()
       }
     } else {
-      const { error } = await supabase.from("fretes_orcamentos").update({ status }).eq("id", id)
+      // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
+      const { error } = await supabase.from("fretes_orcamento").update({ status }).eq("id", id)
       if (!error) {
         const frete = fretes.find(f => f.id === id)
         if (status === "aceito") {
-          await supabase.from("caixa").insert({
+          // 🔧 CORRIGIDO: "caixa" → "caixa_movimentacoes"
+          await supabase.from("caixa_movimentacoes").insert({
             tipo_entrada_saida: "entrada",
             valor: frete.total_frete,
             descricao: `Frete - ${frete.origem} para ${frete.destino}`,
@@ -86,7 +90,8 @@ export default function OrcamentosPage() {
         await supabase.from("pedidos").delete().eq("id", id)
         carregarPedidos()
       } else {
-        await supabase.from("fretes_orcamentos").delete().eq("id", id)
+        // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
+        await supabase.from("fretes_orcamento").delete().eq("id", id)
         carregarFretes()
       }
       alert("Orçamento excluído!")
