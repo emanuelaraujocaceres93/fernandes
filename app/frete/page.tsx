@@ -30,7 +30,11 @@ export default function FretePage() {
   }, [])
 
   async function carregarConfig() {
-    const { data } = await supabase.from("configuracoes_empresa").select("*").limit(1).single()
+    const { data } = await supabase
+      .from("configuracoes_empresa")
+      .select("*")
+      .limit(1)
+      .single()
     if (data) setConfig(data)
   }
 
@@ -76,28 +80,43 @@ export default function FretePage() {
     try {
       const { data: userData } = await supabase.auth.getUser()
       
-      const { error } = await supabase.from("fretes_orcamentos").insert({
-        cliente: resultado.cliente,
-        origem: resultado.origem,
-        destino: resultado.destino,
-        distancia_km: resultado.distancia,
-        custo_combustivel: resultado.combustivel,
-        pedagios_valor: resultado.pedagios,
-        custo_total: resultado.custoTotal,
-        total_frete: resultado.valorFinal,
-        status: "pendente",
-        user_id: userData.user?.id
-      })
+      if (!userData.user) {
+        alert("Você precisa estar logado")
+        setLoading(false)
+        return
+      }
+
+      // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
+      const { error } = await supabase
+        .from("fretes_orcamento")
+        .insert({
+          cliente: resultado.cliente,
+          origem: resultado.origem || "",
+          destino: resultado.destino || "",
+          distancia_km: resultado.distancia,
+          custo_combustivel: resultado.combustivel,
+          pedagios_valor: resultado.pedagios,
+          custo_total: resultado.custoTotal,
+          total_frete: resultado.valorFinal,
+          status: "pendente",
+          user_id: userData.user.id
+        })
 
       if (error) {
+        console.error("Erro ao salvar:", error)
         alert("Erro ao salvar: " + error.message)
         setLoading(false)
         return
       }
 
-      const { data: configData } = await supabase.from("configuracoes_empresa").select("*").limit(1).single()
+      const { data: configData } = await supabase
+        .from("configuracoes_empresa")
+        .select("*")
+        .limit(1)
+        .single()
       const configAtual = configData || config
 
+      // Gerar PDF
       const element = document.createElement("div")
       element.innerHTML = `
         <div style="width: 800px; margin: 0 auto; background: white; font-family: 'Helvetica', Arial, sans-serif;">
@@ -150,6 +169,7 @@ export default function FretePage() {
       setDistancia("")
       setResultado(null)
     } catch (error) {
+      console.error("Erro ao gerar:", error)
       alert("Erro ao gerar orçamento: " + String(error))
     } finally {
       setLoading(false)
@@ -193,8 +213,8 @@ export default function FretePage() {
                 <div className="p-2 bg-gray-50 rounded"><strong>Custo total:</strong> R$ {resultado.custoTotal.toFixed(2)}</div>
                 <div className="p-2 bg-gray-50 rounded"><strong>Margem:</strong> {resultado.margem}%</div>
                 <div className="p-4 bg-[#c9a03d] bg-opacity-30 rounded text-center">
-                  <span className="font-bold">💰 💰 VALOR DO FRETE:</span>
-                  <div className="font-bold text-2xl text-amber-700">R$ ${resultado.valorFinal.toFixed(2)}</div>
+                  <span className="font-bold">💰 VALOR DO FRETE:</span>
+                  <div className="font-bold text-2xl text-amber-700">R$ {resultado.valorFinal.toFixed(2)}</div>
                 </div>
               </div>
               <button onClick={gerarOrcamento} disabled={loading} className="w-full py-3 bg-[#1a2a4f] text-white rounded-lg">
@@ -207,4 +227,3 @@ export default function FretePage() {
     </div>
   )
 }
-

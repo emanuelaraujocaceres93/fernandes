@@ -45,9 +45,10 @@ export default function OrcamentosPage() {
     if (data) setPedidos(data)
   }
 
+  // 🔧 CARREGAR FRETES - NOME CORRETO DA TABELA
   async function carregarFretes() {
     const { data } = await supabase
-      .from("fretes_orcamento")
+      .from("fretes_orcamento")  // ← CORRIGIDO
       .select("*")
       .order("created_at", { ascending: false })
     if (data) setFretes(data)
@@ -57,7 +58,6 @@ export default function OrcamentosPage() {
   async function regenerarPDF(pedidoId: string) {
     setRegenerando(pedidoId)
     try {
-      // Buscar dados do pedido
       const { data: pedido } = await supabase
         .from("pedidos")
         .select("*, clientes(nome)")
@@ -70,13 +70,11 @@ export default function OrcamentosPage() {
         return
       }
 
-      // Buscar itens do pedido
       const { data: itens } = await supabase
         .from("itens_pedido")
         .select("*, produtos(nome, tipo)")
         .eq("pedido_id", pedidoId)
 
-      // Montar linhas do PDF
       const linhasPDF = (itens || []).map((item: any) => ({
         descricao: `${item.produtos?.nome || "Item"}${item.produtos?.tipo === "servico" ? " (Serviço)" : ""}`,
         quantidade: item.quantidade,
@@ -88,7 +86,6 @@ export default function OrcamentosPage() {
         ["Status", pedido.status || "Pendente"]
       ]
 
-      // Gerar o PDF
       saveQuotePdf(
         {
           titulo: "Orçamento",
@@ -129,7 +126,10 @@ export default function OrcamentosPage() {
         carregarPedidos()
       }
     } else {
-      const { error } = await supabase.from("fretes_orcamento").update({ status }).eq("id", id)
+      const { error } = await supabase
+        .from("fretes_orcamento")  // ← CORRIGIDO
+        .update({ status })
+        .eq("id", id)
       if (!error) {
         const frete = fretes.find(f => f.id === id)
         if (status === "aceito") {
@@ -155,7 +155,10 @@ export default function OrcamentosPage() {
         await supabase.from("pedidos").delete().eq("id", id)
         carregarPedidos()
       } else {
-        await supabase.from("fretes_orcamento").delete().eq("id", id)
+        await supabase
+          .from("fretes_orcamento")  // ← CORRIGIDO
+          .delete()
+          .eq("id", id)
         carregarFretes()
       }
       alert("Orçamento excluído!")
