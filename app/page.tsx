@@ -133,6 +133,7 @@ export default function PDV() {
     })
   }
 
+  // 🔧 FUNÇÃO CORRIGIDA - REMOVIDO user_id
   async function criarClienteSeNecessario() {
     const nome = normalizeText(nomeCliente)
     if (!nome) {
@@ -143,19 +144,14 @@ export default function PDV() {
     const existente = clientes.find((cliente) => cliente.nome.toLowerCase() === nome.toLowerCase())
     if (existente) return existente
 
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) {
-      setErro("Sessão expirada. Entre novamente.")
-      return null
-    }
-
     const { data, error } = await supabase
       .from("clientes")
-      .insert({ nome, user_id: userData.user.id })
+      .insert({ nome })
       .select()
       .single()
 
     if (error || !data) {
+      console.error("Erro ao criar cliente:", error)
       setErro("Não foi possível cadastrar o cliente.")
       return null
     }

@@ -60,66 +60,6 @@ const categoriasMateriais = {
   }
 };
 
-export const templatesOrcamento = [
-  {
-    id: "instalacao_6_split",
-    nome: "Instalação de 6 Ar Condicionados Split",
-    descricao: "Instalação completa de 6 unidades split (9.000 a 12.000 BTUs)",
-    itensInclusos: [
-      "Tubulação em cobre",
-      "Isolamento térmico",
-      "Cabo PP",
-      "Interligações entre as máquinas",
-      "Materiais e mão-de-obra para drenos"
-    ],
-    valorBase: 11500.00,
-    materiaisSugeridos: [
-      "cobre_14", "cobre_38", "cabopp_5x15", "suporte_cond",
-      "bucha_s10", "parafuso_10", "silver_tape"
-    ]
-  },
-  {
-    id: "manutencao_preventiva",
-    nome: "Manutenção Preventiva",
-    descricao: "Manutenção completa de ar condicionado",
-    itensInclusos: [
-      "Higienização completa",
-      "Limpeza de filtros",
-      "Verificação de carga de gás",
-      "Teste de funcionamento"
-    ],
-    valorBase: 350.00,
-    materiaisSugeridos: ["higienizacao", "limpeza_filtro"]
-  },
-  {
-    id: "conserto_geral",
-    nome: "Reparo Geral",
-    descricao: "Conserto completo do sistema de refrigeração",
-    itensInclusos: [
-      "Diagnóstico completo",
-      "Reparos elétricos",
-      "Troca de componentes defeituosos",
-      "Teste de performance"
-    ],
-    valorBase: 450.00,
-    materiaisSugeridos: ["reparos_eletricos", "troca_cabo", "valvula_schrader"]
-  },
-  {
-    id: "instalacao_split_simples",
-    nome: "Instalação de Ar Condicionado Split (Unidade)",
-    descricao: "Instalação padrão de uma unidade split",
-    itensInclusos: [
-      "Instalação da unidade interna",
-      "Instalação da condensadora",
-      "Tubulação de cobre 3/8 e 1/4",
-      "Cabo PP 5 vias",
-      "Teste de vácuo e carga de gás"
-    ],
-    valorBase: 1200.00,
-    materiaisSugeridos: ["cobre_14", "cobre_38", "cabopp_5x15", "filtro_secador"]
-  }
-];
-
 export default function MateriaisOpcoes({ onSelecionadosChange, initialSelecionados = {} }: MateriaisOpcoesProps) {
   const [selecionados, setSelecionados] = useState<any>(initialSelecionados);
   const [categoriasAbertas, setCategoriasAbertas] = useState<Record<string, boolean>>({
