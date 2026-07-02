@@ -126,7 +126,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     `
   }
 
-  // 🔧 HTML SEM RODAPÉ (o rodapé será adicionado pelo jsPDF)
   element.innerHTML = `
     <!-- HEADER -->
     <div style="text-align: center; padding: 35px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
@@ -197,8 +196,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       <p style="color: #1a2a4f; font-size: 14px; font-weight: bold; margin: 0 0 5px 0; letter-spacing: 2px;">TOTAL GERAL</p>
       <p style="font-size: 32px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
     </div>
-    
-    <!-- 🔧 SEM RODAPÉ NO HTML - será adicionado pelo jsPDF -->
   `
 
   document.body.appendChild(element)
@@ -219,46 +216,54 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const pdf = new jsPDF("p", "mm", "a4")
   const imgWidth = 190
   const imgHeight = (canvas.height * imgWidth) / canvas.width
-  const pageHeight = 277
+  // 🔧 ALTURA ÚTIL DA PÁGINA (com margem para o rodapé)
+  const pageHeight = 270 // Reduzido para caber o rodapé
   const imgHeightMM = imgHeight
 
-  // 🔧 FUNÇÃO PARA ADICIONAR RODAPÉ EM CADA PÁGINA
-  function addFooterToPage(doc: jsPDF, pageNum: number) {
-    const yPos = 285
+  // 🔧 FUNÇÃO PARA ADICIONAR RODAPÉ
+  function addFooterToPage(doc: jsPDF) {
+    const yPos = 282
     doc.setFillColor("#1a2a4f")
-    doc.rect(0, yPos, 210, 12, "F")
+    doc.rect(0, yPos, 210, 15, "F")
     doc.setTextColor("#ffffff")
     doc.setFont("helvetica", "normal")
     doc.setFontSize(7)
     doc.text("Este orçamento é válido por 30 dias", 105, yPos + 6, { align: "center" })
     doc.setFontSize(6)
-    doc.text(`${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento`, 105, yPos + 10, { align: "center" })
+    doc.text(`${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento`, 105, yPos + 11, { align: "center" })
   }
 
-  if (imgHeightMM > pageHeight) {
+  // 🔧 CALCULAR SE PRECISA DE MÚLTIPLAS PÁGINAS
+  const marginTop = 10
+  const marginBottom = 20
+  const usableHeight = 297 - marginTop - marginBottom // ~267mm
+
+  if (imgHeightMM > usableHeight) {
+    // 🔧 MÚLTIPLAS PÁGINAS
     let heightLeft = imgHeightMM
     let position = 0
-    let pageNum = 1
+    let isFirstPage = true
 
-    // Primeira página
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
-    addFooterToPage(pdf, pageNum)
-    heightLeft -= pageHeight
-    pageNum++
-
-    // Páginas adicionais
     while (heightLeft > 0) {
-      position = heightLeft - imgHeightMM
-      pdf.addPage()
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
-      addFooterToPage(pdf, pageNum)
-      heightLeft -= pageHeight
-      pageNum++
+      if (!isFirstPage) {
+        pdf.addPage()
+      }
+      
+      // Calcular quanto da imagem cabe nesta página
+      const yOffset = position
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, yOffset, imgWidth, imgHeight)
+      addFooterToPage(pdf)
+      
+      heightLeft -= usableHeight
+      position -= usableHeight
+      isFirstPage = false
     }
   } else {
+    // 🔧 UMA ÚNICA PÁGINA (sem páginas extras)
     const xPos = (210 - imgWidth) / 2
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, 10, imgWidth, imgHeight)
-    addFooterToPage(pdf, 1)
+    const yPos = 10
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
+    addFooterToPage(pdf)
   }
 
   pdf.save(filename)
