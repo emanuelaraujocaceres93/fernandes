@@ -34,26 +34,34 @@ function money(value: number): string {
   }).format(valorSeguro)
 }
 
-function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null) {
+async function carregarImagemBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.readAsDataURL(blob)
+    })
+  } catch (error) {
+    console.error("Erro ao carregar imagem:", error)
+    return null
+  }
+}
+
+// 🔧 FUNÇÃO CORRIGIDA - SEM DUPLICAÇÃO
+function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null, logoBase64?: string | null) {
   // Fundo principal
   doc.setFillColor(primary)
   doc.rect(0, 0, 210, 50, "F")
   
   // Logo (se houver)
-  if (config?.logo_url) {
+  if (logoBase64) {
     try {
-      // Tenta adicionar a logo - será processada no front-end
-      // Por enquanto, deixamos espaço para a logo
-      doc.setFillColor("#ffffff")
-      doc.rect(14, 8, 35, 35, "F")
-      doc.setFillColor("#e5e7eb")
-      doc.rect(14, 8, 35, 35, "F")
-      doc.setTextColor("#64748b")
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(7)
-      doc.text("Logo", 31, 28, { align: "center" })
+      doc.addImage(logoBase64, 'PNG', 14, 8, 35, 35)
     } catch (e) {
-      // Ignora erro de logo
+      console.error("Erro ao adicionar logo:", e)
     }
   }
   
@@ -61,21 +69,22 @@ function addHeader(doc: jsPDF, title: string, config?: EmpresaConfig | null) {
   doc.setTextColor("#ffffff")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(22)
-  doc.text(config?.nome_empresa || "Fernandes Sistemas", config?.logo_url ? 56 : 14, 25)
+  const nomeX = logoBase64 ? 56 : 14
+  doc.text(config?.nome_empresa || "Fernandes Sistemas", nomeX, 22)
   
-  // Telefone
+  // Telefone - abaixo do nome
   doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   doc.setTextColor("#c9a03d")
-  doc.text(config?.telefone || "Sistema de gestão comercial", config?.logo_url ? 56 : 14, 35)
+  doc.text(config?.telefone || "Sistema de gestão comercial", nomeX, 32)
 
   // Título do documento (alinhado à direita)
   doc.setTextColor(accent)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(16)
-  doc.text(title.toUpperCase(), 196, 25, { align: "right" })
+  doc.text(title.toUpperCase(), 196, 22, { align: "right" })
   
-  // Linha decorativa dourada
+  // Linha decorativa
   doc.setDrawColor(accent)
   doc.setLineWidth(1)
   doc.line(14, 45, 196, 45)
@@ -91,8 +100,14 @@ function addFooter(doc: jsPDF) {
   doc.text(`Gerado em: ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}`, 105, 297, { align: "center" })
 }
 
-export function saveQuotePdf(input: QuotePdfInput, filename: string) {
+export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const doc = new jsPDF("p", "mm", "a4")
+  
+  let logoBase64 = null
+  if (input.config?.logo_url) {
+    logoBase64 = await carregarImagemBase64(input.config.logo_url)
+  }
+  
   const issuedAt = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -101,7 +116,7 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
     minute: "2-digit"
   }).format(new Date())
 
-  addHeader(doc, input.titulo, input.config)
+  addHeader(doc, input.titulo, input.config, logoBase64)
 
   // Título
   doc.setTextColor(primary)
@@ -151,7 +166,7 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
     }
   }
 
-  // STATUS - com cor dinâmica
+  // STATUS
   const statusColors: Record<string, string> = {
     "pendente": "#fef3c7",
     "aceito": "#dcfce7",
@@ -170,7 +185,7 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
   doc.setTextColor("#1a1a1a")
   doc.text(statusText, 20, yAtual + 17)
   
-  // SERVIÇOS EXTRAS (total)
+  // SERVIÇOS EXTRAS
   if (servicosExtrasTotal > 0) {
     doc.setFillColor("#fef3c7")
     doc.roundedRect(108, yAtual, 88, 22, 3, 3, "FD")
@@ -186,7 +201,7 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
   
   yAtual += 28
 
-  // LISTA DE SERVIÇOS EXTRAS (detalhada)
+  // LISTA DE SERVIÇOS EXTRAS
   if (servicosExtrasLista.length > 0) {
     const altura = 12 + (servicosExtrasLista.length * 5.5)
     doc.setFillColor("#fffbeb")
@@ -250,13 +265,11 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
   
   let linhaCount = 0
   for (const line of input.linhas) {
-    // Verificar se precisa de nova página
     if (yAtual > 255) {
       addFooter(doc)
       doc.addPage()
-      addHeader(doc, input.titulo, input.config)
+      addHeader(doc, input.titulo, input.config, logoBase64)
       yAtual = 60
-      // Recriar cabeçalho da tabela na nova página
       doc.setFillColor(primary)
       doc.rect(14, yAtual - 8, 182, 12, "F")
       doc.setTextColor("#ffffff")
@@ -273,11 +286,9 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
     const rowHeight = Math.max(11, description.length * 5 + 8)
     const posicaoCentral = yAtual + (rowHeight / 2)
     
-    // Linha de separação
     doc.setDrawColor("#e5e7eb")
     doc.line(14, yAtual + rowHeight - 1, 196, yAtual + rowHeight - 1)
     
-    // Alternar cores das linhas
     if (linhaCount % 2 === 0) {
       doc.setFillColor("#fafafa")
       doc.rect(14, yAtual, 182, rowHeight - 1, "F")
@@ -292,7 +303,7 @@ export function saveQuotePdf(input: QuotePdfInput, filename: string) {
     linhaCount++
   }
 
-  // TOTAL GERAL - DESTAQUE
+  // TOTAL GERAL
   yAtual += 10
   doc.setFillColor(accent)
   doc.roundedRect(118, yAtual, 78, 24, 3, 3, "F")
