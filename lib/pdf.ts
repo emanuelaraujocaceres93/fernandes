@@ -90,15 +90,15 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     }
   }
 
-  // 🔧 SERVIÇOS EXTRAS LISTA - MANTIDO
+  // Serviços extras lista
   let servicosHTML = ""
   if (servicosExtrasLista.length > 0) {
     for (const servico of servicosExtrasLista) {
-      servicosHTML += `<li style="margin: 2px 0; font-size: 12px; color: #4a4a4a;">• ${servico}</li>`
+      servicosHTML += `<li style="margin: 2px 0; font-size: 12px; color: #4a4a4a; list-style: none; padding-left: 16px;">• ${servico}</li>`
     }
   }
 
-  // 🔧 OBSERVAÇÕES - MANTIDO
+  // Observações
   let observacoesHTML = ""
   if (observacoesText && observacoesText.trim() !== "") {
     observacoesHTML = `
@@ -109,12 +109,13 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     `
   }
 
+  // 🔧 LOGO MAIOR (igual ao frete - max-width: 150px)
   element.innerHTML = `
     <!-- HEADER -->
-    <div style="text-align: center; padding: 30px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
-      ${input.config?.logo_url ? `<img src="${input.config.logo_url}" style="max-width: 120px; margin: 0 auto 15px auto; display: block;" />` : ""}
-      <h1 style="color: white; margin: 0; font-size: 24px; letter-spacing: 2px;">${input.config?.nome_empresa || "Fernandes Sistemas"}</h1>
-      ${input.config?.telefone ? `<p style="color: #c9a03d; margin: 8px 0 0 0; font-size: 14px;">📞 ${input.config.telefone}</p>` : ""}
+    <div style="text-align: center; padding: 35px 20px; background: linear-gradient(135deg, #1a2a4f 0%, #2c3e66 100%); border-radius: 10px 10px 0 0;">
+      ${input.config?.logo_url ? `<img src="${input.config.logo_url}" style="max-width: 150px; margin: 0 auto 15px auto; display: block;" />` : ""}
+      <h1 style="color: white; margin: 0; font-size: 26px; letter-spacing: 2px;">${input.config?.nome_empresa || "Fernandes Sistemas"}</h1>
+      ${input.config?.telefone ? `<p style="color: #c9a03d; margin: 8px 0 0 0; font-size: 15px;">📞 ${input.config.telefone}</p>` : ""}
     </div>
     
     <!-- TÍTULO -->
@@ -144,15 +145,15 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       ` : ""}
     </div>
     
-    <!-- 🔧 SERVIÇOS CONTRATADOS - RESTAURADO -->
+    <!-- SERVIÇOS CONTRATADOS -->
     ${servicosHTML ? `
       <div style="background: #fffbeb; padding: 12px 16px; border-radius: 8px; margin: 10px 0;">
         <p style="font-weight: bold; font-size: 12px; color: #1a2a4f; margin: 0 0 8px 0;">SERVIÇOS CONTRATADOS:</p>
-        <ul style="margin: 0; padding-left: 20px; list-style: none;">${servicosHTML}</ul>
+        <ul style="margin: 0; padding-left: 0; list-style: none;">${servicosHTML}</ul>
       </div>
     ` : ""}
     
-    <!-- 🔧 OBSERVAÇÕES - RESTAURADO -->
+    <!-- OBSERVAÇÕES -->
     ${observacoesHTML}
     
     <!-- TABELA DE PRODUTOS -->
@@ -180,10 +181,10 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       <p style="font-size: 32px; font-weight: bold; color: white; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${money(input.total)}</p>
     </div>
     
-    <!-- FOOTER -->
+    <!-- 🔧 FOOTER - CORRIGIDO (SEM DUPLICAÇÃO) -->
     <div style="text-align: center; padding: 12px; background: #1a2a4f; border-radius: 0 0 10px 10px; margin-top: 10px;">
       <p style="margin: 0; font-size: 11px; color: #94a3b8;">Este orçamento é válido por 30 dias</p>
-      <p style="margin: 5px 0 0 0; font-size: 10px; color: #64748b;">${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento</p>
+      <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b;">${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento</p>
     </div>
   `
 
