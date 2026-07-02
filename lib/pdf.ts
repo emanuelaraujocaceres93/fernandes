@@ -202,7 +202,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   await new Promise(resolve => setTimeout(resolve, 500))
 
   // ============================================
-  // CAPTURAR E DIVIDIR EM VÁRIAS PÁGINAS
+  // CAPTURAR
   // ============================================
   const canvas = await html2canvas(element, { 
     scale: 2,
@@ -217,10 +217,10 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const imgWidth = 190
   const imgHeight = (canvas.height * imgWidth) / canvas.width
   
-  // 🔧 ALTURAS
+  // Alturas
   const pageHeight = 297
   const marginTop = 8
-  const marginBottom = 30 // Aumentado para garantir que o rodapé não corte conteúdo
+  const marginBottom = 30
   const usableHeight = pageHeight - marginTop - marginBottom
 
   function addFooterToPage(doc: jsPDF) {
@@ -235,28 +235,29 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     doc.text(`${input.config?.nome_empresa || "Fernandes Sistemas"} - Orçamento`, 105, yPos + 9, { align: "center" })
   }
 
-  // 🔧 VERIFICAR SE CABE EM UMA PÁGINA
+  // 🔧 SE CABE EM UMA PÁGINA
   if (imgHeight <= usableHeight) {
-    // ✅ UMA ÚNICA PÁGINA
     const xPos = (210 - imgWidth) / 2
-    const yPos = 8
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, yPos, imgWidth, imgHeight)
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, 8, imgWidth, imgHeight)
     addFooterToPage(pdf)
   } else {
-    // 🔄 MÚLTIPLAS PÁGINAS - COM CORTE LIMPO
-    // Calcular quantas páginas são necessárias
+    // 🔧 MÚLTIPLAS PÁGINAS - DIVISÃO SIMPLES E LIMPA
+    // Calcular quantas páginas
     const totalPages = Math.ceil(imgHeight / usableHeight)
-    let position = 0
     
     for (let i = 0; i < totalPages; i++) {
       if (i > 0) {
         pdf.addPage()
       }
       
-      // 🔧 Posicionar a imagem de forma que o conteúdo seja distribuído
-      // A primeira página começa em 0, as próximas continuam de onde parou
+      // 🔧 Calcular a posição correta para cada página
+      // A imagem é uma única longa imagem, e cada página mostra uma fatia dela
       const yOffset = -i * usableHeight
+      
+      // Adicionar a imagem com o offset correto
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, yOffset, imgWidth, imgHeight)
+      
+      // Adicionar rodapé
       addFooterToPage(pdf)
     }
   }
