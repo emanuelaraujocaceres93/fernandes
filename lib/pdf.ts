@@ -90,7 +90,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     }
   }
 
-  // Serviços extras lista
+  // 🔧 SERVIÇOS EXTRAS LISTA - MANTIDO
   let servicosHTML = ""
   if (servicosExtrasLista.length > 0) {
     for (const servico of servicosExtrasLista) {
@@ -98,7 +98,7 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
     }
   }
 
-  // Observações
+  // 🔧 OBSERVAÇÕES - MANTIDO
   let observacoesHTML = ""
   if (observacoesText && observacoesText.trim() !== "") {
     observacoesHTML = `
@@ -144,15 +144,15 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       ` : ""}
     </div>
     
-    <!-- SERVIÇOS CONTRATADOS -->
+    <!-- 🔧 SERVIÇOS CONTRATADOS - RESTAURADO -->
     ${servicosHTML ? `
-      <div style="background: #fffbeb; padding: 10px 16px; border-radius: 8px; margin: 10px 0;">
-        <p style="font-weight: bold; font-size: 11px; color: #1a2a4f; margin: 0 0 8px 0;">SERVIÇOS CONTRATADOS:</p>
-        <ul style="margin: 0; padding-left: 20px;">${servicosHTML}</ul>
+      <div style="background: #fffbeb; padding: 12px 16px; border-radius: 8px; margin: 10px 0;">
+        <p style="font-weight: bold; font-size: 12px; color: #1a2a4f; margin: 0 0 8px 0;">SERVIÇOS CONTRATADOS:</p>
+        <ul style="margin: 0; padding-left: 20px; list-style: none;">${servicosHTML}</ul>
       </div>
     ` : ""}
     
-    <!-- OBSERVAÇÕES -->
+    <!-- 🔧 OBSERVAÇÕES - RESTAURADO -->
     ${observacoesHTML}
     
     <!-- TABELA DE PRODUTOS -->
@@ -205,19 +205,16 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
   const pdf = new jsPDF("p", "mm", "a4")
   const imgWidth = 190
   const imgHeight = (canvas.height * imgWidth) / canvas.width
-  const pageHeight = 277 // Altura da página A4 em mm (com margem)
+  const pageHeight = 277
   const imgHeightMM = imgHeight
 
-  // Se a imagem for maior que uma página, dividir
   if (imgHeightMM > pageHeight) {
     let heightLeft = imgHeightMM
     let position = 0
 
-    // Primeira página
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
 
-    // Páginas adicionais
     while (heightLeft > 0) {
       position = heightLeft - imgHeightMM
       pdf.addPage()
@@ -225,7 +222,6 @@ export async function saveQuotePdf(input: QuotePdfInput, filename: string) {
       heightLeft -= pageHeight
     }
   } else {
-    // Se couber em uma página
     const xPos = (210 - imgWidth) / 2
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", xPos, 10, imgWidth, imgHeight)
   }
