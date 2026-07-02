@@ -1,21 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "../../../lib/supabaseClient"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value)
-}
+import { formatCurrency } from "../../../lib/format"
 
 export default function DetalhesOrcamento() {
   const { id } = useParams()
@@ -54,7 +43,7 @@ export default function DetalhesOrcamento() {
   }
   
   if (!orcamento) {
-    return <div className="p-8 text-center text-red-500">Orcamento nao encontrado</div>
+    return <div className="p-8 text-center text-red-500">Orçamento não encontrado</div>
   }
 
   return (
@@ -64,9 +53,9 @@ export default function DetalhesOrcamento() {
           ← Voltar para lista
         </Link>
       </div>
-      <h1 className="text-2xl font-bold mb-4">Detalhes do Orcamento</h1>
+      <h1 className="text-2xl font-bold mb-4">Detalhes do Orçamento</h1>
       <div className="bg-gray-50 p-4 rounded mb-4">
-        <p><strong>Numero:</strong> {orcamento.numero_unico || "-"}</p>
+        <p><strong>Número:</strong> {orcamento.numero_unico || "-"}</p>
         <p><strong>Cliente:</strong> {orcamento.clientes?.nome || "-"}</p>
         <p><strong>Data:</strong> {new Date(orcamento.data).toLocaleDateString()}</p>
         <p><strong>Status:</strong> {orcamento.status}</p>
@@ -75,19 +64,21 @@ export default function DetalhesOrcamento() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[#1a2a4f] text-white">
-              <th className="p-2 text-left">Produto/Servico</th>
+              <th className="p-2 text-left">Produto/Serviço</th>
               <th className="p-2 text-right">Qtde</th>
-              <th className="p-2 text-right">Unitario</th>
+              <th className="p-2 text-right">Unitário</th>
               <th className="p-2 text-right">Total</th>
             </tr>
           </thead>
           <tbody>
             {itens.map((item) => (
               <tr key={item.id} className="border-b">
-                <td className="p-2">{item.produtos?.nome || "Produto nao encontrado"}</td>
+                <td className="p-2">{item.produtos?.nome || "Produto não encontrado"}</td>
                 <td className="p-2 text-right">{item.quantidade}</td>
-                <td className="p-2 text-right">{formatCurrency(item.valor_unitario)}</td>
-                <td className="p-2 text-right">{formatCurrency(item.valor_total)}</td>
+                {/* 🔧 CORRIGIDO: valor_unitario → preco_unitario */}
+                <td className="p-2 text-right">{formatCurrency(item.preco_unitario || 0)}</td>
+                {/* 🔧 CORRIGIDO: valor_total → subtotal */}
+                <td className="p-2 text-right">{formatCurrency(item.subtotal || 0)}</td>
               </tr>
             ))}
           </tbody>

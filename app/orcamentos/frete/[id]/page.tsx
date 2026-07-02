@@ -1,21 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "../../../../lib/supabaseClient"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value)
-}
+import { formatCurrency } from "../../../../lib/format"
 
 export default function DetalhesFrete() {
   const { id } = useParams()
@@ -28,8 +17,9 @@ export default function DetalhesFrete() {
 
   async function carregarDetalhes() {
     try {
+      // 🔧 CORRIGIDO: "fretes_orcamentos" → "fretes_orcamento"
       const { data } = await supabase
-        .from("fretes_orcamentos")
+        .from("fretes_orcamento")
         .select("*")
         .eq("id", id)
         .single()
@@ -47,7 +37,7 @@ export default function DetalhesFrete() {
   }
   
   if (!frete) {
-    return <div className="p-8 text-center text-red-500">Frete nao encontrado</div>
+    return <div className="p-8 text-center text-red-500">Frete não encontrado</div>
   }
 
   return (
@@ -62,7 +52,7 @@ export default function DetalhesFrete() {
         <p><strong>Cliente:</strong> {frete.cliente || "-"}</p>
         <p><strong>Origem:</strong> {frete.origem || "-"}</p>
         <p><strong>Destino:</strong> {frete.destino || "-"}</p>
-        <p><strong>Distancia:</strong> {frete.distancia_km ? `${frete.distancia_km} km` : "-"}</p>
+        <p><strong>Distância:</strong> {frete.distancia_km ? `${frete.distancia_km} km` : "-"}</p>
         <p><strong>Data:</strong> {new Date(frete.created_at).toLocaleDateString()}</p>
         <p><strong>Status:</strong> {frete.status || "pendente"}</p>
         <p className="text-lg font-bold mt-4">Valor total: {formatCurrency(frete.total_frete)}</p>
